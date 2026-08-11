@@ -34,10 +34,8 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-# GUVENLIK SINIRI: sistem yalnizca bu klasore yazabilir.
-# Bu dosya core/ icinde oldugu icin bir ust klasore cikip workspace'i buluyoruz.
-PROJE_KOKU = Path(__file__).resolve().parent.parent
-WORKSPACE = PROJE_KOKU / "workspace"
+from core.guvenlik import WORKSPACE, guvenli_klasor
+from core.metin import sadelestir
 
 # Aday durumlari
 BEKLIYOR = "bekliyor"
@@ -95,22 +93,10 @@ class OnayKuyrugu:
                      (Testlerde gecici bir klasor verilebilir; ama gercek
                       kullanimda workspace disina cikmak MUMKUN DEGIL.)
         """
-        kok = Path(izinli_kok) if izinli_kok is not None else WORKSPACE
-        hedef = Path(klasor) if klasor is not None else kok
-
-        kok = kok.resolve()
-        kok.mkdir(parents=True, exist_ok=True)
-        hedef = hedef.resolve()
-
-        # --- Guvenlik kontrolu: hedef klasor, izinli kokun ICINDE mi? ---
-        if not _icinde_mi(hedef, kok):
-            raise PermissionError(
-                f"Yazma reddedildi. Sistem yalnizca {kok} klasorune yazabilir, "
-                f"ama {hedef} istendi."
-            )
-
-        self.klasor = hedef
-        self.klasor.mkdir(parents=True, exist_ok=True)
+        # Guvenlik kontrolu core/guvenlik.py'de; workspace disina cikilamaz.
+        # WORKSPACE'i burada okuyoruz ki testler gecici klasorle degistirebilsin.
+        kok = izinli_kok if izinli_kok is not None else WORKSPACE
+        self.klasor = guvenli_klasor(klasor if klasor is not None else kok, kok)
 
         self.kuyruk_dosyasi = self.klasor / "onay_kuyrugu.json"
         self.hafiza_dosyasi = self.klasor / "hafiza.json"
@@ -172,11 +158,11 @@ class OnayKuyrugu:
         adaylar = self._adaylar()
 
         for a in adaylar:
-            if a.durum == BEKLIYOR and _sadelestir(a.metin) == _sadelestir(metin):
+            if a.durum == BEKLIYOR and sadelestir(a.metin) == sadelestir(metin):
                 return a  # zaten kuyrukta
 
         for h in self.hafiza():
-            if _sadelestir(h["metin"]) == _sadelestir(metin):
+            if sadelestir(h["metin"]) == sadelestir(metin):
                 # Zaten onaylanmis; yeniden onaya sunmanin anlami yok.
                 return Aday(
                     no=h.get("no", 0), metin=h["metin"], kaynak=h.get("kaynak", ""),
@@ -287,20 +273,6 @@ class OnayKuyrugu:
     def gecmis(self) -> list[dict]:
         """Onay/red kararlarinin denetim kaydi."""
         return self._oku(self.gecmis_dosyasi)
-
-
-def _icinde_mi(yol: Path, kok: Path) -> bool:
-    """yol, kok klasorunun icinde mi? (kokun kendisi de kabul)"""
-    try:
-        yol.relative_to(kok)
-        return True
-    except ValueError:
-        return False
-
-
-def _sadelestir(metin: str) -> str:
-    """Karsilastirma icin: kucuk harf, fazla bosluklar tek bosluk."""
-    return " ".join((metin or "").lower().split())
 
 
 # -- Terminal komutlari ------------------------------------------------------

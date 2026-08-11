@@ -1,0 +1,33 @@
+# Her push'ta testleri ve eval'i otomatik calistirir.
+#
+# NEDEN? CLAUDE.md kurali: "Hicbir degisiklik eval'den gecmeden kalici olmaz."
+# Bunu elde hatirlamak zor; GitHub her push'ta kendi calistirsin.
+# Kirmizi carpi gorursen degisiklikte bir sey bozulmus demektir.
+
+name: testler
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Depoyu indir
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Bagimliliklari kur
+        run: pip install -r requirements.txt
+
+      - name: Testleri calistir
+        run: pytest -q
+
+      - name: Eval'i calistir (30/30 bekleniyor)
+        run: python -m evals.puanla --cevap-anahtari --esik 30

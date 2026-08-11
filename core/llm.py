@@ -26,6 +26,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
+from core.metin import sadelestir
+
 
 @dataclass
 class Cevap:
@@ -109,9 +111,9 @@ class MockLLM(LLM):
     def cevapla(self, istem: str, sistem: str | None = None) -> Cevap:
         self.gecmis.append({"istem": istem, "sistem": sistem})
 
-        anahtar = _sadelestir(istem)
+        anahtar = sadelestir(istem)
         for soru, cevap in self.cevaplar.items():
-            if _sadelestir(soru) == anahtar:
+            if sadelestir(soru) == anahtar:
                 return Cevap(metin=cevap, model_adi=self.ad)
 
         return Cevap(metin=self.sabit_cevap, model_adi=self.ad)
@@ -191,15 +193,6 @@ def llm_olustur(ad: str = "mock", **ayarlar) -> LLM:
             f"Secenekler: {', '.join(sorted(KAYITLI_MODELLER))}"
         )
     return KAYITLI_MODELLER[anahtar](**ayarlar)
-
-
-def _sadelestir(metin: str) -> str:
-    """
-    Karsilastirma icin metni sadelestirir: bastaki/sondaki bosluklar gider,
-    harfler kucuk olur, ic bosluklar tekile iner.
-    'Merhaba   DUNYA ' ile 'merhaba dunya' ayni sayilsin diye.
-    """
-    return " ".join(metin.lower().split())
 
 
 if __name__ == "__main__":

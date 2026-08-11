@@ -44,6 +44,9 @@ if str(PROJE_KOKU) not in sys.path:
     sys.path.insert(0, str(PROJE_KOKU))
 
 from core.llm import LLM, llm_olustur  # noqa: E402
+# Puanlamada Turkce harflere duyarsiz karsilastirma yapiyoruz:
+# "açlık" yazan da "aclik" yazan da ayni puani almali.
+from core.metin import turkcesiz as sadelestir  # noqa: E402
 
 EVAL_DOSYASI = Path(__file__).resolve().parent / "eval_seti.json"
 WORKSPACE = PROJE_KOKU / "workspace"
@@ -55,24 +58,6 @@ SISTEM_METNI = (
     "Sen Cekirdek adli bir asistansin. Kisa, net ve Turkce cevap ver. "
     "Bilmiyorsan bilmiyorum de, uydurma."
 )
-
-# Turkce harfleri sadelestirme tablosu (karsilastirma icin).
-_HARF_TABLOSU = str.maketrans(
-    {
-        "ı": "i", "İ": "i", "I": "i",
-        "ç": "c", "Ç": "c",
-        "ş": "s", "Ş": "s",
-        "ğ": "g", "Ğ": "g",
-        "ü": "u", "Ü": "u",
-        "ö": "o", "Ö": "o",
-    }
-)
-
-
-def sadelestir(metin: str) -> str:
-    """Karsilastirmaya hazir hale getirir: kucuk harf, Turkce harfler sade, tek bosluk."""
-    return " ".join((metin or "").translate(_HARF_TABLOSU).lower().split())
-
 
 def eval_setini_yukle(yol: str | Path = EVAL_DOSYASI) -> list[dict]:
     """eval_seti.json dosyasini okur ve soru listesini dondurur."""
