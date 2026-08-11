@@ -1,0 +1,48 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- Sanal ortam (venv) ---
+.venv/
+venv/
+env/
+
+# --- Test / arac onbellekleri ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Editor / isletim sistemi ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Sistemin yazma izni olan tek klasor ---
+# workspace/ klasorunun KENDISI git'te durur (.gitkeep sayesinde),
+# ama icine uretilen dosyalar depoya girmez.
+workspace/*
+!workspace/.gitkeep
+
+# --- Calisma zamani uretilen veriler ---
+# Onay kuyrugu, hafiza ve durum dosyalari kisiye ozeldir, depoya girmez.
+data/
+*.db
+*.sqlite3
+state.json
+approval_queue.json
+
+# --- Model dosyalari (cok buyuk) ---
+*.gguf
+*.bin
+*.safetensors
+
+# --- Gizli anahtarlar ---
+.env
+.env.*

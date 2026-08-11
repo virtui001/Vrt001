@@ -1,0 +1,7 @@
+# Bu klasor bilerek bostur.
+#
+# GUVENLIK SINIRI: Sistem SADECE bu klasore dosya yazabilir.
+# Buranin disina yazma girisimi kod tarafindan reddedilir.
+#
+# Git bos klasorleri takip etmedigi icin bu .gitkeep dosyasi duruyor.
+# Icerideki uretilen dosyalar .gitignore ile depodan haric tutulur.

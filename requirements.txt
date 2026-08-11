@@ -1,0 +1,29 @@
+# Cekirdek - Python bagimliliklari
+#
+# KURAL: Yeni bir bagimlilik eklemeden once NEDEN gerektigi yazilir.
+# Faz 1'in "modelden bagimsiz" kismi bilerek neredeyse sifir bagimlilik kullanir:
+# state.py, llm.py ve approval.py sadece Python'un kendi kutuphaneleriyle calisir
+# (json, dataclasses, pathlib, datetime, abc). Boylece tabletten/telefondan bile
+# calistirilabilir ve ileride robota tasinirken hicbir sey kirilmaz.
+
+# --- Test ---
+# pytest: testleri calistirmak icin. Tek bagimliligimiz bu.
+pytest>=8.0
+
+# ---------------------------------------------------------------------------
+# ASAGIDAKILER HENUZ KURULMUYOR (bilgisayara gecince acilacak)
+# ---------------------------------------------------------------------------
+#
+# ollama>=0.3          # Faz 0/1: yerel modele HTTP ile soru sormak icin.
+#                      # OllamaLLM sinifi bunu kullanacak. Su an iskelet halinde,
+#                      # bu yuzden kurmuyoruz.
+#
+# chromadb>=0.5        # Faz 1: konusma hafizasi icin vektor veritabani.
+#                      # "Dun ne konustuk" sorusunu cevaplayan parca.
+#
+# sentence-transformers # Faz 1: cumleleri sayi dizisine (embedding) cevirir.
+#                      # Chroma'nin arama yapabilmesi icin gerekli.
+#
+# faster-whisper       # Faz 2: mikrofon -> metin.
+# ultralytics          # Faz 2: kamera -> nesne tespiti (YOLO).
+# fastapi + uvicorn    # Faz 2 sonu: terminalden basit web arayuzune gecis.

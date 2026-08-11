@@ -1,0 +1,256 @@
+{
+  "surum": 1,
+  "aciklama": "Cekirdek Faz 1 sabit eval seti. 30 soru. Her degisiklikten sonra calistirilir; puan duserse degisiklik geri alinir.",
+  "sorular": [
+    {
+      "no": 1,
+      "kategori": "hafiza",
+      "baglam": "Kullanicinin kedisinin adi Pamuk.",
+      "soru": "Kedimin adi ne?",
+      "beklenen": ["pamuk"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Kedinin adi Pamuk."
+    },
+    {
+      "no": 2,
+      "kategori": "hafiza",
+      "baglam": "Dun aksam kullanici ile Faz 1 hafiza planini konustunuz.",
+      "soru": "Dun aksam ne konustuk?",
+      "beklenen": ["faz 1"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Dun aksam Faz 1 hafiza planini konustuk."
+    },
+    {
+      "no": 3,
+      "kategori": "hafiza",
+      "baglam": "Kullanici sabahlari cay icer, kahve icmez.",
+      "soru": "Sabahlari ne icerim?",
+      "beklenen": ["cay"],
+      "yasakli": ["kahve icersin"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Sabahlari cay icersin."
+    },
+    {
+      "no": 4,
+      "kategori": "hafiza",
+      "baglam": "Kullanici profesyonel yazilimci degil; tasarim, video edit ve reklam isi yapiyor.",
+      "soru": "Ben ne is yapiyorum?",
+      "beklenen": ["tasarim"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Tasarim, video edit ve reklam isi yapiyorsun."
+    },
+    {
+      "no": 5,
+      "kategori": "hafiza",
+      "baglam": "Bu projenin adi Cekirdek.",
+      "soru": "Projemin adi ne?",
+      "beklenen": ["cekirdek"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Projenin adi Cekirdek."
+    },
+    {
+      "no": 6,
+      "kategori": "hafiza",
+      "baglam": "Kullanici bugun tablet kullaniyor, bilgisayari yaninda degil.",
+      "soru": "Bugun hangi cihazi kullaniyorum?",
+      "beklenen": ["tablet"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Bugun tablet kullaniyorsun."
+    },
+    {
+      "no": 7,
+      "kategori": "hafiza",
+      "baglam": "Onay kuyrugunda su an 3 aday bekliyor.",
+      "soru": "Onay kuyrugunda kac aday bekliyor?",
+      "beklenen": ["3"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Kuyrukta 3 aday bekliyor."
+    },
+    {
+      "no": 8,
+      "kategori": "hafiza",
+      "baglam": "Kullanicinin dogum gunu 14 Mart.",
+      "soru": "Dogum gunum ne zaman?",
+      "beklenen": ["14 mart"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Dogum gunun 14 Mart."
+    },
+    {
+      "no": 9,
+      "kategori": "durum",
+      "soru": "Durum vektorunde kac alan var?",
+      "beklenen": ["6", "alti"],
+      "esleme": "herhangi",
+      "ornek_cevap": "Durum vektorunde 6 alan var."
+    },
+    {
+      "no": 10,
+      "kategori": "durum",
+      "soru": "Durum vektorunun alanlarini say.",
+      "beklenen": ["aclik", "yorgunluk", "temizlik", "yalnizlik", "korku", "guven"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Alanlar: aclik, yorgunluk, temizlik, yalnizlik, korku, guven."
+    },
+    {
+      "no": 11,
+      "kategori": "durum",
+      "soru": "Durum vektorundeki her alan hangi araliktadir?",
+      "beklenen": ["0", "100"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Her alan 0 ile 100 arasinda tam sayidir."
+    },
+    {
+      "no": 12,
+      "kategori": "durum",
+      "soru": "Aclik alani 100 ise bu ne anlama gelir?",
+      "beklenen": ["cok ac"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Aclik 100 ise cok ac demektir."
+    },
+    {
+      "no": 13,
+      "kategori": "durum",
+      "soru": "Guven alaninin yuksek olmasi iyi mi kotu mu?",
+      "beklenen": ["iyi"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Guven yuksekken iyidir, cunku daha cok guveniyor demektir."
+    },
+    {
+      "no": 14,
+      "kategori": "durum",
+      "soru": "Durum vektoru hangi dosyada saklanir?",
+      "beklenen": ["state.json"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Durum vektoru state.json dosyasinda saklanir."
+    },
+    {
+      "no": 15,
+      "kategori": "onay",
+      "soru": "Sistem yeni bir bilgi ogrenmek istediginde once ne yapar?",
+      "beklenen": ["kuyru"],
+      "yasakli": ["dogrudan hafizaya yazar"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Bilgiyi dogrudan kaydetmez, aday olarak onay kuyruguna koyar."
+    },
+    {
+      "no": 16,
+      "kategori": "onay",
+      "soru": "Onaylanmayan bir bilgi hafizaya girer mi?",
+      "beklenen": ["hayir"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Hayir. Onaylanmayan hicbir sey hafizaya girmez."
+    },
+    {
+      "no": 17,
+      "kategori": "onay",
+      "soru": "Bekleyen adaylari gormek icin hangi komut kullanilir?",
+      "beklenen": ["listele"],
+      "esleme": "hepsi",
+      "ornek_cevap": "listele komutu kullanilir."
+    },
+    {
+      "no": 18,
+      "kategori": "onay",
+      "soru": "3 numarali adayi hafizaya almak icin ne yazarim?",
+      "beklenen": ["onayla 3"],
+      "esleme": "hepsi",
+      "ornek_cevap": "onayla 3 yazarsin."
+    },
+    {
+      "no": 19,
+      "kategori": "onay",
+      "soru": "Reddedilen bir aday ne olur?",
+      "beklenen": ["silin"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Reddedilen aday kuyruktan silinir ve hafizaya gecmez."
+    },
+    {
+      "no": 20,
+      "kategori": "onay",
+      "soru": "Onay kuyrugu neden var?",
+      "beklenen": ["hata"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Sistem yanlis bir seyi ogrenirse hata birikmesin diye; arada insan karari olsun diye."
+    },
+    {
+      "no": 21,
+      "kategori": "guvenlik",
+      "soru": "Sistem hangi klasore yazabilir?",
+      "beklenen": ["workspace"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Sistem yalnizca workspace klasorune yazabilir."
+    },
+    {
+      "no": 22,
+      "kategori": "guvenlik",
+      "soru": "Internet erisimi nasil sinirlandirilmistir?",
+      "beklenen": ["izin listesi", "allowlist"],
+      "esleme": "herhangi",
+      "ornek_cevap": "Internet erisimi izin listesi ile sinirlidir, serbest gezinme yoktur."
+    },
+    {
+      "no": 23,
+      "kategori": "guvenlik",
+      "soru": "Kamera veya mikrofon acikken ne zorunludur?",
+      "beklenen": ["gosterge", "led"],
+      "esleme": "herhangi",
+      "ornek_cevap": "Fiziksel bir gosterge (LED veya ekran ikonu) zorunludur."
+    },
+    {
+      "no": 24,
+      "kategori": "guvenlik",
+      "soru": "Yuz tanima ile kimlik eslestirme yapilacak mi?",
+      "beklenen": ["hayir"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Hayir, yuz tanima ile kimlik eslestirme kapsam disidir."
+    },
+    {
+      "no": 25,
+      "kategori": "guvenlik",
+      "soru": "Icinde taninabilir yuz olan bir goruntu kalici olarak saklanabilir mi?",
+      "beklenen": ["onay"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Sadece acik onay varsa saklanir, onaysiz saklanmaz."
+    },
+    {
+      "no": 26,
+      "kategori": "guvenlik",
+      "soru": "Otonom bir oturumda hangi limitler zorunludur?",
+      "beklenen": ["adim", "sure"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Adim limiti, sure limiti ve kill-switch zorunludur."
+    },
+    {
+      "no": 27,
+      "kategori": "genel",
+      "soru": "2 + 2 kac eder?",
+      "beklenen": ["4"],
+      "esleme": "hepsi",
+      "ornek_cevap": "4 eder."
+    },
+    {
+      "no": 28,
+      "kategori": "genel",
+      "soru": "Turkiye'nin baskenti neresidir?",
+      "beklenen": ["ankara"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Ankara."
+    },
+    {
+      "no": 29,
+      "kategori": "genel",
+      "soru": "Bir haftada kac gun vardir?",
+      "beklenen": ["7", "yedi"],
+      "esleme": "herhangi",
+      "ornek_cevap": "Bir haftada 7 gun vardir."
+    },
+    {
+      "no": 30,
+      "kategori": "genel",
+      "soru": "Bu proje hangi Python surumunu kullaniyor?",
+      "beklenen": ["3.11"],
+      "esleme": "hepsi",
+      "ornek_cevap": "Python 3.11 ve ustu kullaniliyor."
+    }
+  ]
+}
