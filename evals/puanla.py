@@ -205,6 +205,16 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Cekirdek eval puanlama betigi")
     p.add_argument("--model", default="mock", help="mock (varsayilan) veya ollama")
     p.add_argument(
+        "--sunucu",
+        default=None,
+        help="Ollama adresi (varsayilan http://localhost:11434)",
+    )
+    p.add_argument(
+        "--ollama-model",
+        default=None,
+        help="Hangi Ollama modeli (orn. qwen2.5:7b). Modelleri kiyaslamak icin.",
+    )
+    p.add_argument(
         "--cevap-anahtari",
         action="store_true",
         help="MockLLM'e ornek cevaplari ogretir. Puanlayicinin dogru calistigini "
@@ -221,13 +231,23 @@ def main(argv: list[str] | None = None) -> int:
     if args.model == "mock" and args.cevap_anahtari:
         anahtar = {s["soru"]: s.get("ornek_cevap", "") for s in sorular}
         llm = llm_olustur("mock", cevaplar=anahtar)
+    elif args.model == "ollama":
+        ayarlar = {}
+        if args.sunucu:
+            ayarlar["sunucu"] = args.sunucu
+        if args.ollama_model:
+            ayarlar["model"] = args.ollama_model
+        llm = llm_olustur("ollama", **ayarlar)
     else:
         llm = llm_olustur(args.model)
 
     if not llm.hazir_mi():
         print(
-            f"'{args.model}' modeli hazir degil.\n"
-            "Ollama iskelet halinde; once Faz 0'i bitir ya da --model mock kullan."
+            f"'{args.model}' modeli hazir degil. Muhtemel sebepler:\n"
+            "  1. Ollama calismiyor      -> ollama serve\n"
+            "  2. Model indirilmemis     -> ollama list, sonra ollama pull <model>\n"
+            "  3. Model adi yanlis yazilmis (orn. llama3.1:8b)\n"
+            "Modelsiz calismak icin: --model mock"
         )
         return 1
 

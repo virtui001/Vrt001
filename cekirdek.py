@@ -42,8 +42,9 @@ from pathlib import Path
 from core.approval import OnayKuyrugu
 from core.guvenlik import WORKSPACE
 from core.llm import LLM, llm_olustur
-from core.memory import CEKIRDEK, KULLANICI, Hafiza
+from core.memory import CEKIRDEK, KULLANICI, Hafiza, OllamaGomucu
 from core.metin import turkcesiz
+from core.ollama_baglanti import VARSAYILAN_SUNUCU
 from models.state import Durum, kaydet as durum_kaydet, yukle_veya_varsayilan
 
 SISTEM_METNI = (
@@ -90,12 +91,13 @@ class Cekirdek:
         llm: LLM | None = None,
         klasor: str | Path | None = None,
         izinli_kok: str | Path | None = None,
+        gomucu=None,
     ) -> None:
         kok = izinli_kok if izinli_kok is not None else WORKSPACE
         hedef = klasor if klasor is not None else kok
 
         self.llm = llm or llm_olustur("mock")
-        self.hafiza = Hafiza(klasor=hedef, izinli_kok=kok)
+        self.hafiza = Hafiza(klasor=hedef, izinli_kok=kok, gomucu=gomucu)
         self.kuyruk = OnayKuyrugu(klasor=hedef, izinli_kok=kok)
         self.durum_yolu = self.kuyruk.klasor / "state.json"
         self.durum = yukle_veya_varsayilan(self.durum_yolu)
@@ -253,14 +255,28 @@ def main(argv: list[str] | None = None, girdi=input, yazdir=print) -> int:
     konusabiliyor. Normal kullanimda Python'un kendi input/print'i kullanilir.
     """
     argv = list(sys.argv[1:] if argv is None else argv)
-    model_adi = "mock"
-    if "--model" in argv:
-        yer = argv.index("--model")
-        if yer + 1 < len(argv):
-            model_adi = argv[yer + 1]
+
+    def _secenek(ad: str, varsayilan: str) -> str:
+        if ad in argv:
+            yer = argv.index(ad)
+            if yer + 1 < len(argv):
+                return argv[yer + 1]
+        return varsayilan
+
+    model_adi = _secenek("--model", "mock")
+    # Ollama baska bir bilgisayarda/kapida calisiyorsa buradan verilir.
+    sunucu = _secenek("--sunucu", VARSAYILAN_SUNUCU)
+    # Hangi Ollama modeli: llama3.1:8b, qwen2.5:7b, gemma2:9b ...
+    ollama_modeli = _secenek("--ollama-model", "")
 
     try:
-        llm = llm_olustur(model_adi)
+        if model_adi == "ollama":
+            ayarlar = {"sunucu": sunucu}
+            if ollama_modeli:
+                ayarlar["model"] = ollama_modeli
+            llm = llm_olustur("ollama", **ayarlar)
+        else:
+            llm = llm_olustur(model_adi)
     except ValueError as hata:
         yazdir(f"Hata: {hata}")
         return 1
@@ -272,7 +288,22 @@ def main(argv: list[str] | None = None, girdi=input, yazdir=print) -> int:
         )
         return 1
 
-    c = Cekirdek(llm=llm)
+    # Gomucu secimi: gercek model kullaniyorsak anlamsal gomucuyu deneriz.
+    # Kurulu degilse BasitGomucu ile devam ederiz -- calismamaktansa
+    # kelime benzerligiyle calismak daha iyi. Ama sessizce degil, soyleyerek.
+    gomucu = None
+    gomucu_notu = ""
+    if model_adi == "ollama":
+        aday_gomucu = OllamaGomucu(sunucu=sunucu)
+        if aday_gomucu.hazir_mi():
+            gomucu = aday_gomucu
+        else:
+            gomucu_notu = (
+                "\nNot: gomme modeli bulunamadi, kelime benzerligiyle calisiyorum.\n"
+                "     Anlamsal arama icin: ollama pull nomic-embed-text"
+            )
+
+    c = Cekirdek(llm=llm, gomucu=gomucu)
 
     # Uyanma: hafizayi yukle, kisa bir satir yaz, sonra sessizce bekle.
     bekleyen = len(c.kuyruk.bekleyenler())
@@ -282,7 +313,7 @@ def main(argv: list[str] | None = None, girdi=input, yazdir=print) -> int:
         f"kalici bilgi: {len(c.kuyruk.hafiza())} | "
         f"onay bekleyen: {bekleyen}"
     )
-    yazdir("Yardim icin /yardim, cikmak icin /cik yaz.\n")
+    yazdir("Yardim icin /yardim, cikmak icin /cik yaz." + gomucu_notu + "\n")
 
     while True:
         try:

@@ -280,7 +280,10 @@ def test_ctrl_c_ile_cikis(monkeypatch, tmp_path):
 
 
 def test_hazir_olmayan_model_uyarir(monkeypatch, tmp_path):
-    kod, cikti = _calistir(["/cik"], monkeypatch, tmp_path, argv=["--model", "ollama"])
+    kod, cikti = _calistir(
+        ["/cik"], monkeypatch, tmp_path,
+        argv=["--model", "ollama", "--sunucu", "http://127.0.0.1:1"],
+    )
     assert kod == 1
     assert "hazir degil" in cikti
 

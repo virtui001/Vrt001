@@ -191,7 +191,7 @@ def test_komut_esik_saglaninca_sifir_dondurur():
 
 def test_ollama_secilirse_kibarca_uyarir(capsys):
     """Iskelet model secilirse patlamaz, ne yapilacagini soyler."""
-    assert main(["--model", "ollama"]) == 1
+    assert main(["--model", "ollama", "--sunucu", "http://127.0.0.1:1"]) == 1
     assert "hazir degil" in capsys.readouterr().out
 
 

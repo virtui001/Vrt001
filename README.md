@@ -3,10 +3,14 @@
 Hafizali, **insan onayli ogrenen**, kademeli olarak duyu ve govde kazanan bir
 yapay zeka asistani. Proje planinin tamami [`CLAUDE.md`](CLAUDE.md) dosyasinda.
 
-Bu depo su an **Faz 1'in modelden bagimsiz kismini** icerir: burada calisan
-hicbir sey bir yapay zeka modeline ihtiyac duymaz. Bilgisayara/GPU'ya gecince
-`OllamaLLM.cevapla` ve `OllamaGomucu.gom` metotlarinin ici doldurulacak,
-geri kalan kod ayni kalacak.
+Depo iki sekilde calisir:
+
+* **Modelsiz** (varsayilan): sahte model ve kelime benzerligiyle. Her sey
+  calisir, cevaplar anlamsizdir. Test ve gelistirme icin.
+* **Gercek modelle**: bilgisayarinda Ollama varsa `--model ollama` ile.
+
+Donanima gore model secimi ve adim adim kurulum:
+[`docs/faz0-kurulum.md`](docs/faz0-kurulum.md).
 
 ## Klasor yapisi
 
@@ -19,6 +23,7 @@ Vrt001/
 │   └── state.py           # Durum vektoru semasi (aclik, yorgunluk, ...)
 ├── core/
 │   ├── guvenlik.py        # Yazma sinirir: sadece workspace/
+│   ├── ollama_baglanti.py # Ollama sunucusuyla konusma (sifir bagimlilik)
 │   ├── metin.py           # Metin sadelestirme (Turkce harflere duyarsiz)
 │   ├── llm.py             # Model arayuzu: MockLLM + OllamaLLM
 │   ├── memory.py          # Konusma gunlugu + geri cagirma
@@ -27,7 +32,7 @@ Vrt001/
 ├── evals/
 │   ├── eval_seti.json     # 30 soruluk sabit test
 │   └── puanla.py          # Puanlama betigi
-├── tests/                 # 236 pytest testi
+├── tests/                 # 261 pytest testi
 └── workspace/             # Sistemin yazma izni olan TEK klasor (bos baslar)
 ```
 
@@ -42,7 +47,8 @@ pip install -r requirements.txt
 ## Calistirma
 
 ```bash
-python cekirdek.py
+python cekirdek.py                 # modelsiz (sahte cevaplar)
+python cekirdek.py --model ollama  # gercek model (Ollama kurulu olmali)
 ```
 
 Acilista hafizasini yukler, tek satir bilgi yazar ve **sessizce bekler**.
@@ -74,9 +80,10 @@ python -m core.versioning kaydet "ne degisti" --etiket v0.1.1
 python -m core.versioning geri_al v0.1.0            # once ne olacagini gosterir
 python -m core.versioning geri_al v0.1.0 --uygula   # gercekten yapar
 
-# 30 soruluk eval (model gerekmez)
+# 30 soruluk eval
 python -m evals.puanla                    # 0/30  - sabit cevap veren model
 python -m evals.puanla --cevap-anahtari   # 30/30 - dogru cevaplari bilen model
+python -m evals.puanla --model ollama --ollama-model qwen2.5:7b   # gercek model
 
 # Testler
 pytest -q
@@ -96,12 +103,19 @@ Sistemin bir bilgiyi **ogrenmesi** icin onay kuyrugundan gecmesi gerekir.
 
 ## Bilinen sinir
 
-Model olmadan calisabilmek icin gomme (embedding) uretimi `BasitGomucu` ile
-yapiliyor: kelimeleri ve 4 harflik parcalari sayar. Bu **kelime benzerligi**
-yakalar, **anlam** degil. "kedi" ile "kedimin" eslesir; "gidiyordum" ile
-"gidecegim" eslesmez. Gercek anlamsal arama, bilgisayara gecip `OllamaGomucu`
-doldurulunca gelecek. Bu sinir `tests/test_memory.py` icinde acikca test edilmis
-durumda.
+Modelsiz calisirken gomme (embedding) uretimi `BasitGomucu` ile yapiliyor:
+kelimeleri ve 4 harflik parcalari sayar. Bu **kelime benzerligi** yakalar,
+**anlam** degil. "kedi" ile "kedimin" eslesir; "gidiyordum" ile "gidecegim"
+eslesmez. Bu sinir `tests/test_memory.py` icinde acikca test edilmis durumda.
+
+`ollama pull nomic-embed-text` ile `OllamaGomucu` devreye girer ve arama
+anlamsal hale gelir. Gomme modeli yoksa program patlamaz, kelime benzerligine
+duser ve bunu acilista soyler.
+
+Ayrica: Ollama'ya baglanan kod gercek bir Ollama sunucusuna karsi degil, onun
+cevap seklini taklit eden sahte bir sunucuya karsi test edildi
+(`tests/test_ollama.py`). Bilgisayarda ilk calistirmada beklenmedik bir sey
+cikabilir; hata mesajlari bunu anlatacak sekilde yazildi.
 
 ## Guvenlik sinirlari (pazarlik disi)
 

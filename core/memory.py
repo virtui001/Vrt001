@@ -45,7 +45,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from core.guvenlik import WORKSPACE, guvenli_klasor
-from core.metin import kelimeler, turkcesiz
+from core.metin import kelimeler
+from core.ollama_baglanti import (
+    VARSAYILAN_SUNUCU,
+    OllamaHatasi,
+    istek,
+    model_var_mi,
+)
 
 # Konusmadaki roller
 KULLANICI = "kullanici"
@@ -141,30 +147,61 @@ class BasitGomucu(Gomucu):
 
 class OllamaGomucu(Gomucu):
     """
-    GERCEK ANLAMSAL GOMUCU -- SU AN ISKELET.
+    GERCEK ANLAMSAL GOMUCU -- Ollama'daki gomme modelini kullanir.
 
-    Bilgisayara gecince:
-      1. `ollama pull nomic-embed-text` (kucuk ve hizli bir gomme modeli)
-      2. `pip install ollama`
-      3. Asagidaki gom() metodunun icini doldur.
-    Baska hicbir dosya degismeyecek; hafiza hangi gomucuyu kullandigini bilmiyor.
+    BasitGomucu'dan farki: bu ANLAMA bakar. "gidiyordum" ile "gidecegim"in
+    ayni fiil oldugunu, "kedi" ile "pisi"nin yakin oldugunu bilir. BasitGomucu
+    bunlari bilemez cunku sadece harfleri sayar.
+
+    Kullanmadan once:
+        ollama pull nomic-embed-text     (~275 MB, kucuk ve hizli)
+
+    Vektor boyutu ilk istekte sunucudan ogrenilir; elle yazmiyoruz ki model
+    degisirse (ornegin mxbai-embed-large) kod kendini ayarlasin.
     """
 
     ad = "ollama"
 
-    def __init__(self, model: str = "nomic-embed-text", sunucu: str = "http://localhost:11434") -> None:
+    def __init__(
+        self,
+        model: str = "nomic-embed-text",
+        sunucu: str = VARSAYILAN_SUNUCU,
+        zaman_asimi_sn: float = 60.0,
+    ) -> None:
         self.model = model
         self.sunucu = sunucu
-        self.boyut = 768  # nomic-embed-text'in vektor boyutu
+        self.zaman_asimi_sn = zaman_asimi_sn
+        self.boyut = 0  # ilk gom() cagrisinda dolar
 
     def gom(self, metin: str) -> list[float]:
-        raise NotImplementedError(
-            "OllamaGomucu henuz doldurulmadi. Model olmadan calismak icin "
-            "BasitGomucu kullaniliyor."
+        veri = istek(
+            "/api/embeddings",
+            {"model": self.model, "prompt": metin or ""},
+            self.sunucu,
+            self.zaman_asimi_sn,
         )
+        vektor = veri.get("embedding")
+        if not vektor:
+            raise OllamaHatasi(
+                f"Gomme modeli bos cevap dondurdu. Gelen veri: {str(veri)[:200]}"
+            )
+
+        if self.boyut and len(vektor) != self.boyut:
+            raise OllamaHatasi(
+                f"Vektor boyu degisti ({self.boyut} -> {len(vektor)}). "
+                "Model degistiyse eski kayitlar bu modelle uyusmaz."
+            )
+        self.boyut = len(vektor)
+
+        # Uzunlugu 1'e getiriyoruz. benzerlik() fonksiyonu vektorlerin
+        # normalize oldugunu varsayiyor; BasitGomucu ile ayni kurala uyalim.
+        uzunluk = math.sqrt(sum(d * d for d in vektor))
+        if uzunluk == 0:
+            return vektor
+        return [d / uzunluk for d in vektor]
 
     def hazir_mi(self) -> bool:
-        return False
+        return model_var_mi(self.model, self.sunucu, zaman_asimi_sn=5.0)
 
 
 def seyreklestir(vektor: list[float]) -> dict[str, float]:
@@ -284,14 +321,19 @@ class Hafiza:
             raise ValueError("Bos mesaj kaydedilemez.")
 
         ham = self._oku()
+
+        # Once gommeyi hesapla, SONRA boyutu oku. Ters sirada olursa sorun cikar:
+        # OllamaGomucu vektor boyunu ilk istekten sonra ogreniyor, once sorarsak
+        # 0 yazilir ve her aramada gereksiz yere yeniden hesaplanir.
+        vektor = self.gomucu.gom(metin)
         mesaj = Mesaj(
             no=(max((k["no"] for k in ham), default=0) + 1),
             rol=rol,
             metin=metin,
             zaman=_simdi(),
             gomucu=self.gomucu.ad,
-            boyut=self.gomucu.boyut,
-            gomme=seyreklestir(self.gomucu.gom(metin)),
+            boyut=len(vektor),
+            gomme=seyreklestir(vektor),
         )
         ham.append(asdict(mesaj))
         self._yaz(ham)

@@ -155,10 +155,13 @@ def test_seyrek_sadece_dolu_kovalari_saklar():
     assert 0 < len(seyrek) < 100  # 4096 degil, cok daha az
 
 
-def test_ollama_gomucu_iskelet():
-    g = OllamaGomucu()
+def test_ollama_gomucu_sunucu_yoksa_hazir_degil():
+    from core.ollama_baglanti import OllamaHatasi
+
+    kapali = "http://127.0.0.1:1"
+    g = OllamaGomucu(sunucu=kapali)
     assert g.hazir_mi() is False
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(OllamaHatasi, match="ulasilamadi"):
         g.gom("merhaba")
 
 

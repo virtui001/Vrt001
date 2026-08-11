@@ -14,9 +14,10 @@ pytest>=8.0
 # ASAGIDAKILER HENUZ KURULMUYOR (bilgisayara gecince acilacak)
 # ---------------------------------------------------------------------------
 #
-# ollama>=0.3          # Faz 0/1: yerel modele HTTP ile soru sormak icin.
-#                      # OllamaLLM sinifi bunu kullanacak. Su an iskelet halinde,
-#                      # bu yuzden kurmuyoruz.
+# ollama>=0.3          # KURULMADI ve kurulmayacak. Ollama'ya baglanmak icin
+#                      # gereken sey duz bir HTTP istegi; Python bunu kendi
+#                      # icinde yapiyor (urllib). Bkz. core/ollama_baglanti.py.
+#                      # Bir bagimlilik eksik = kurulumda ters gidecek bir sey eksik.
 #
 # chromadb>=0.5        # Faz 1: konusma hafizasi icin vektor veritabani.
 #                      # "Dun ne konustuk" sorusunu cevaplayan parca.

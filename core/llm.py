@@ -11,9 +11,9 @@ Bu dosya iste o sozu tanimlar (LLM sinifi) ve iki farkli uygulamasini verir:
 
   1) MockLLM   -> Sahte model. Gercek bir yapay zeka yok, sabit/kayitli
                   cevaplar dondurur. Bilgisayar/GPU olmadan test yapabilmek icin.
-  2) OllamaLLM -> Gercek yerel model. SU AN ISKELET. Bilgisayara gecince
-                  icini dolduracagiz. Iskelet olmasi kasitli: arayuz bugunden
-                  sabitlensin, sonra sadece bir metodun ici yazilsin.
+  2) OllamaLLM -> Gercek yerel model. Bilgisayarindaki Ollama'ya baglanir.
+                  Calismasi icin Ollama'nin acik ve modelin inmis olmasi gerek;
+                  degilse hazir_mi() False doner ve sistem mock'a duser.
 
 NEDEN BOYLE?
 Yarin Ollama'dan LM Studio'ya veya llama.cpp'ye gecersek, projenin geri kalaninda
@@ -23,10 +23,17 @@ Buna "bagimliligi tersine cevirme" denir; sade hali bu kadar.
 
 from __future__ import annotations
 
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
 from core.metin import sadelestir
+from core.ollama_baglanti import (
+    VARSAYILAN_SUNUCU,
+    OllamaHatasi,
+    istek,
+    model_var_mi,
+)
 
 
 @dataclass
@@ -124,20 +131,20 @@ class MockLLM(LLM):
 
 class OllamaLLM(LLM):
     """
-    GERCEK YEREL MODEL -- SU AN ISKELET, CALISMAZ.
+    GERCEK YEREL MODEL -- bilgisayarindaki Ollama'ya baglanir.
 
-    Bilgisayara gecince yapilacaklar (tek tek):
-      1. `pip install ollama` (requirements.txt'de yorum satirinda hazir duruyor).
-      2. Terminalde `ollama serve` calisiyor mu kontrol et.
-      3. Donanima uygun modeli indir. VRAM'e gore:
-           8-16 GB VRAM -> 8B/14B sinifi
-           24 GB VRAM   -> 30B MoE sinifi
-         (CLAUDE.md kurali: donanim bilinmeden model secilmez.)
-      4. Asagidaki `cevapla` metodunun icindeki NotImplementedError'i sil,
-         yerine ollama cagrisini yaz. Baska HICBIR dosyaya dokunma.
+    Varsayilan model 'llama3.1:8b': RTX 3070'in 8 GB hafizasina sigan en
+    buyuk siniftan. 14B sinifi 8 GB'a SIGMAZ, yarisi RAM'e taşar ve cok
+    yavaslar. (Model secimi neden boyle: docs/faz0-kurulum.md)
 
-    Metodu simdiden bos birakmamizin sebebi: arayuzun sekli bugun sabitlensin,
-    yarin sadece ic kisim dolsun. Boylece bugun yazdigimiz testler yarin da gecerli.
+    Kullanmadan once:
+        ollama serve                 (arka planda calissin)
+        ollama pull llama3.1:8b      (modeli indir, ~4.7 GB)
+
+    Not: Bu kod gercek bir Ollama sunucusuna karsi degil, onun cevap seklini
+    taklit eden sahte bir sunucuya karsi test edildi (tests/test_ollama.py).
+    Bilgisayarinda ilk calistirdiginda beklenmedik bir sey cikarsa hata
+    mesajini bana getir.
     """
 
     ad = "ollama"
@@ -145,7 +152,7 @@ class OllamaLLM(LLM):
     def __init__(
         self,
         model: str = "llama3.1:8b",
-        sunucu: str = "http://localhost:11434",
+        sunucu: str = VARSAYILAN_SUNUCU,
         sicaklik: float = 0.7,
         zaman_asimi_sn: float = 120.0,
     ) -> None:
@@ -155,16 +162,48 @@ class OllamaLLM(LLM):
         self.zaman_asimi_sn = zaman_asimi_sn
 
     def cevapla(self, istem: str, sistem: str | None = None) -> Cevap:
-        raise NotImplementedError(
-            "OllamaLLM henuz doldurulmadi (Faz 1 - modelden bagimsiz kisim).\n"
-            "Bilgisayara gecince: pip install ollama, ardindan bu metodun icine\n"
-            "ollama.chat(...) cagrisini yaz. core/llm.py disinda degisiklik gerekmez."
+        mesajlar = []
+        if sistem:
+            mesajlar.append({"role": "system", "content": sistem})
+        mesajlar.append({"role": "user", "content": istem})
+
+        basla = time.perf_counter()
+        veri = istek(
+            "/api/chat",
+            {
+                "model": self.model,
+                "messages": mesajlar,
+                "stream": False,  # cevabi parca parca degil, tek seferde al
+                "options": {"temperature": self.sicaklik},
+            },
+            self.sunucu,
+            self.zaman_asimi_sn,
+        )
+        sure = time.perf_counter() - basla
+
+        metin = (veri.get("message") or {}).get("content", "")
+        if not metin:
+            raise OllamaHatasi(
+                f"Model bos cevap dondurdu. Gelen veri: {str(veri)[:200]}"
+            )
+
+        # Olcum bilgileri: kac parca uretti, saniyede kac parca.
+        # CLAUDE.md Faz 2 kurali "olcmeden bir ust kademeye cikilmaz" -- olcum
+        # aliskanligini bugunden kuruyoruz.
+        uretilen = veri.get("eval_count", 0)
+        return Cevap(
+            metin=metin.strip(),
+            model_adi=self.model,
+            sure_sn=round(sure, 2),
+            ek_bilgi={
+                "uretilen_parca": uretilen,
+                "parca_hiz": round(uretilen / sure, 1) if sure > 0 else 0.0,
+            },
         )
 
     def hazir_mi(self) -> bool:
-        # Iskelet oldugu surece durusu net olsun: hazir degil.
-        # Doldurulunca burasi sunucuya kucuk bir istek atip True/False donecek.
-        return False
+        """Ollama calisiyor ve model kurulu mu? Ulasilamazsa False."""
+        return model_var_mi(self.model, self.sunucu, zaman_asimi_sn=5.0)
 
 
 # -- Fabrika -----------------------------------------------------------------

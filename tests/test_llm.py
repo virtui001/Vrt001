@@ -8,6 +8,12 @@ Yarin OllamaLLM'in ici doldugunda ayni testlerin cogu ona da uygulanabilir.
 import pytest
 
 from core.llm import KAYITLI_MODELLER, LLM, Cevap, MockLLM, OllamaLLM, llm_olustur
+from core.ollama_baglanti import OllamaHatasi
+
+# Kesin kapali bir adres: 1 numarali kapiya kimse baglanamaz.
+# Testlerin gercek Ollama'ya (11434) carpmasini istemiyoruz -- calisiyorsa
+# testin sonucu bilgisayara gore degisirdi.
+KAPALI_SUNUCU = "http://127.0.0.1:1"
 
 
 # -- Arayuz (sozlesme) -------------------------------------------------------
@@ -87,14 +93,21 @@ def test_cevap_model_adini_tasir():
 # -- OllamaLLM (iskelet) -----------------------------------------------------
 
 
-def test_ollama_henuz_hazir_degil():
-    """Iskelet oldugu surece durusu net: hazir degil. Sessizce yanlis cevap vermez."""
-    assert OllamaLLM().hazir_mi() is False
+def test_ollama_sunucu_yoksa_hazir_degil():
+    """Ollama calismiyorsa durusu net: hazir degil. Sessizce yanlis cevap vermez."""
+    assert OllamaLLM(sunucu=KAPALI_SUNUCU).hazir_mi() is False
 
 
-def test_ollama_cevapla_acik_hata_verir():
-    with pytest.raises(NotImplementedError, match="OllamaLLM"):
-        OllamaLLM().cevapla("merhaba")
+def test_ollama_sunucu_yoksa_ne_yapilacagini_soyler():
+    """
+    Hata mesaji 'ConnectionRefusedError' degil, kontrol listesi olmali.
+    Hata okumayi ogrenmek bu projenin bir parcasi; okunabilir olsun.
+    """
+    with pytest.raises(OllamaHatasi) as hata:
+        OllamaLLM(sunucu=KAPALI_SUNUCU).cevapla("merhaba")
+    mesaj = str(hata.value)
+    assert "ulasilamadi" in mesaj
+    assert "ollama serve" in mesaj
 
 
 def test_ollama_ayarlari_saklar():
