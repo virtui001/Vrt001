@@ -132,7 +132,7 @@ Once her sey yerinde mi, onu dogrula:
 pytest -q
 ```
 
-**Ne gormelisin:** `300 passed`. Bir tanesi bile kirmizi yanarsa bana getir.
+**Ne gormelisin:** `315 passed`. Bir tanesi bile kirmizi yanarsa bana getir.
 
 ---
 
@@ -250,7 +250,18 @@ calisiyor.
 
 ## Bir sey ters giderse
 
-Program artik anlasilir hata mesajlari veriyor. En sik gorulecekler:
+**Once bunu calistir:**
+
+```powershell
+python -m core.tani
+```
+
+Python surumunden Ollama'ya, hafizadan son olcume kadar her seyin durumunu
+tek ekranda gosterir ve sirada ne yapman gerektigini yazar. Hicbir seyi
+degistirmez. Cozemezsen ciktisinin tamamini kopyalayip bana getir --
+tahmin yurutmemize gerek kalmaz.
+
+Sik gorulen hatalar ve sebepleri:
 
 **"Ollama sunucusuna ulasilamadi"**
 → Ollama kapali. `ollama serve` calistir ya da bilgisayari yeniden baslat.

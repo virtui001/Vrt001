@@ -34,7 +34,7 @@ Vrt001/
 ├── evals/
 │   ├── eval_seti.json     # 30 soruluk sabit test
 │   └── puanla.py          # Puanlama betigi
-├── tests/                 # 293 pytest testi
+├── tests/                 # 315 pytest testi
 └── workspace/             # Sistemin yazma izni olan TEK klasor (bos baslar)
 ```
 
@@ -69,6 +69,16 @@ Acilista hafizasini yukler, tek satir bilgi yazar ve **sessizce bekler**.
 | `/hatirla <soru>` | gecmis konusmalarda arar |
 | `/gecmis [n]` | son n mesaj |
 | `/cik` | cikis |
+
+### Bir sey ters giderse: teshis komutu
+
+```bash
+python -m core.tani
+```
+
+Python surumunden Ollama'ya, hafizadan son eval puanina kadar her seyin
+durumunu tek ekranda gosterir ve sirada ne yapman gerektigini yazar.
+Hicbir seyi degistirmez, sadece bakar. Sorun yasarsan once bunu calistir.
 
 ### Tek tek modulleri calistirma
 
