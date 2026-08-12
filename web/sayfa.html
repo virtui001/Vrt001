@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Çekirdek</title>
+<style>
+  :root {
+    --zemin: #12131a;
+    --kart: #1b1d27;
+    --kart2: #232635;
+    --cizgi: #2e3244;
+    --yazi: #e8e9ef;
+    --soluk: #9297ad;
+    --vurgu: #7c9cff;
+    --yesil: #4ec9a0;
+    --sari: #ffc86b;
+    --kirmizi: #ff7b7b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--zemin); color: var(--yazi);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px; line-height: 1.55;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 14px 20px; border-bottom: 1px solid var(--cizgi); background: var(--kart);
+  }
+  header h1 { font-size: 17px; margin: 0; letter-spacing: .3px; }
+  .rozet {
+    font-size: 12px; padding: 3px 10px; border-radius: 20px;
+    background: var(--kart2); color: var(--soluk); border: 1px solid var(--cizgi);
+  }
+  .rozet.iyi { color: var(--yesil); border-color: #2c5a4a; }
+  .rozet.uyari { color: var(--sari); border-color: #5c4a24; }
+  nav { display: flex; gap: 4px; padding: 12px 20px 0; flex-wrap: wrap; }
+  nav button {
+    background: none; border: none; color: var(--soluk); cursor: pointer;
+    padding: 9px 16px; border-radius: 8px 8px 0 0; font-size: 14px;
+    font-family: inherit; border-bottom: 2px solid transparent;
+  }
+  nav button:hover { color: var(--yazi); background: var(--kart); }
+  nav button.etkin { color: var(--yazi); background: var(--kart); border-bottom-color: var(--vurgu); }
+  main { padding: 20px; max-width: 900px; }
+  .bolum { display: none; }
+  .bolum.etkin { display: block; }
+
+  .kart { background: var(--kart); border: 1px solid var(--cizgi); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .kart h2 { margin: 0 0 10px; font-size: 15px; }
+  .aciklama { color: var(--soluk); font-size: 13px; margin: 0 0 14px; }
+
+  /* Sohbet */
+  #konusma { min-height: 220px; max-height: 46vh; overflow-y: auto; padding-right: 4px; }
+  .balon { padding: 10px 14px; border-radius: 12px; margin-bottom: 10px; max-width: 85%; white-space: pre-wrap; word-wrap: break-word; }
+  .balon.sen { background: var(--vurgu); color: #10121c; margin-left: auto; }
+  .balon.o { background: var(--kart2); }
+  .balon.not { background: #2a2418; color: var(--sari); font-size: 13px; max-width: 100%; border: 1px solid #5c4a24; }
+  .yazi-alani { display: flex; gap: 8px; margin-top: 12px; }
+  input[type=text], textarea {
+    flex: 1; background: var(--kart2); border: 1px solid var(--cizgi); color: var(--yazi);
+    padding: 11px 14px; border-radius: 10px; font-size: 15px; font-family: inherit;
+  }
+  input[type=text]:focus, textarea:focus { outline: 2px solid var(--vurgu); outline-offset: -1px; }
+
+  button.dugme {
+    background: var(--vurgu); color: #10121c; border: none; padding: 11px 20px;
+    border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  button.dugme:hover { filter: brightness(1.1); }
+  button.dugme:disabled { opacity: .5; cursor: default; }
+  button.ikincil { background: var(--kart2); color: var(--yazi); border: 1px solid var(--cizgi); }
+  button.yesil { background: var(--yesil); color: #0d1a15; }
+  button.kirmizi { background: var(--kirmizi); color: #1a0d0d; }
+  button.kucuk { padding: 6px 12px; font-size: 13px; border-radius: 8px; }
+
+  /* Listeler */
+  .satir { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px solid var(--cizgi); border-radius: 10px; margin-bottom: 8px; background: var(--kart2); }
+  .satir input[type=checkbox] { margin-top: 4px; width: 17px; height: 17px; accent-color: var(--vurgu); flex-shrink: 0; }
+  .satir .no { color: var(--soluk); font-size: 12px; flex-shrink: 0; min-width: 26px; }
+  .satir .metin { flex: 1; }
+  .satir .kaynak { color: var(--soluk); font-size: 12px; }
+  .bos { color: var(--soluk); text-align: center; padding: 30px 10px; }
+
+  /* Durum çubukları */
+  .durum-satir { display: grid; grid-template-columns: 92px 1fr 44px; gap: 12px; align-items: center; margin-bottom: 12px; }
+  .durum-satir label { font-size: 14px; color: var(--soluk); }
+  input[type=range] { width: 100%; accent-color: var(--vurgu); }
+  .durum-deger { text-align: right; font-variant-numeric: tabular-nums; }
+
+  pre { background: var(--kart2); padding: 14px; border-radius: 10px; overflow-x: auto; font-size: 13px; line-height: 1.5; margin: 0; }
+  .uyari-kutu { background: #2a2418; border: 1px solid #5c4a24; color: var(--sari); padding: 12px 14px; border-radius: 10px; margin-bottom: 14px; font-size: 14px; }
+  .dugme-sira { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Çekirdek</h1>
+  <span class="rozet" id="rozet-model">yükleniyor…</span>
+  <span class="rozet" id="rozet-hafiza"></span>
+  <span class="rozet" id="rozet-kuyruk"></span>
+</header>
+
+<nav>
+  <button class="etkin" data-bolum="sohbet">Sohbet</button>
+  <button data-bolum="kuyruk">Onay Kuyruğu</button>
+  <button data-bolum="hafiza">Hafıza</button>
+  <button data-bolum="durum">Durum</button>
+  <button data-bolum="tani">Teşhis</button>
+</nav>
+
+<main>
+
+  <!-- SOHBET -->
+  <section class="bolum etkin" id="bolum-sohbet">
+    <div class="kart">
+      <div id="uyari-mock" class="uyari-kutu" style="display:none">
+        <b>Sahte model çalışıyor.</b> Cevaplar anlamsız olacak — gerçek yapay zeka bağlı değil.
+        Düzeltmek için Teşhis sekmesine bak.
+      </div>
+      <div id="konusma"></div>
+      <div class="yazi-alani">
+        <input type="text" id="girdi" placeholder="Bir şey yaz ve Enter'a bas…" autocomplete="off">
+        <button class="dugme" id="gonder">Gönder</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ONAY KUYRUĞU -->
+  <section class="bolum" id="bolum-kuyruk">
+    <div class="kart">
+      <h2>Onay bekleyenler</h2>
+      <p class="aciklama">
+        Sistem bunları <b>henüz öğrenmedi</b>. Sen onaylamadan hiçbiri kalıcı hafızaya geçmez.
+        Kutucukları işaretle, sonra alttaki düğmeye bas.
+      </p>
+      <div id="kuyruk-liste"></div>
+      <div class="dugme-sira">
+        <button class="dugme yesil" id="onayla">Seçilenleri öğren</button>
+        <button class="dugme kirmizi" id="reddet">Seçilenleri sil</button>
+        <button class="dugme ikincil" id="hepsini-sec">Hepsini seç</button>
+      </div>
+    </div>
+    <div class="kart">
+      <h2>Elle bilgi ekle</h2>
+      <p class="aciklama">Buraya yazdığın da doğrudan öğrenilmez, kuyruğa aday olarak girer.</p>
+      <div class="yazi-alani">
+        <input type="text" id="ogren-girdi" placeholder="Örnek: Kedimin adı Pamuk" autocomplete="off">
+        <button class="dugme" id="ogren">Kuyruğa ekle</button>
+      </div>
+      <div class="dugme-sira">
+        <button class="dugme ikincil" id="tohumla">Proje kurallarını kuyruğa koy</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HAFIZA -->
+  <section class="bolum" id="bolum-hafiza">
+    <div class="kart">
+      <h2>Kalıcı hafıza</h2>
+      <p class="aciklama">Senin onayından geçmiş bilgiler. Sistem bunları biliyor.</p>
+      <div id="hafiza-liste"></div>
+    </div>
+    <div class="kart">
+      <h2>Son konuşmalar</h2>
+      <p class="aciklama">Ham kayıt — "şunu konuştuk" der, doğru olduğunu iddia etmez.</p>
+      <div id="gecmis-liste"></div>
+    </div>
+  </section>
+
+  <!-- DURUM -->
+  <section class="bolum" id="bolum-durum">
+    <div class="kart">
+      <h2>Durum vektörü</h2>
+      <p class="aciklama">
+        Çekirdek'in o anki iç hali. Çubuğu sürükleyip bırakınca kaydedilir.
+        Temizlik ve güven yüksekken iyi, diğerleri yüksekken kötü.
+      </p>
+      <div id="durum-liste"></div>
+    </div>
+  </section>
+
+  <!-- TANI -->
+  <section class="bolum" id="bolum-tani">
+    <div class="kart">
+      <h2>Teşhis</h2>
+      <p class="aciklama">
+        Her şeyin durumu tek ekranda. Bir sorun varsa ne yapman gerektiğini yazar.
+        Hiçbir şeyi değiştirmez, sadece bakar.
+      </p>
+      <button class="dugme" id="tani-yenile">Yeniden kontrol et</button>
+      <pre id="tani-cikti" style="margin-top:14px">Yükleniyor…</pre>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ---- Yardımcılar ----------------------------------------------------------
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+async function al(yol) {
+  const c = await fetch(yol);
+  return c.json();
+}
+async function yolla(yol, veri) {
+  const c = await fetch(yol, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(veri || {})
+  });
+  return c.json();
+}
+function kacar(metin) {
+  const d = document.createElement("div");
+  d.textContent = metin == null ? "" : String(metin);
+  return d.innerHTML;
+}
+
+// ---- Sekmeler -------------------------------------------------------------
+$$("nav button").forEach(d => d.onclick = () => {
+  $$("nav button").forEach(x => x.classList.remove("etkin"));
+  $$(".bolum").forEach(x => x.classList.remove("etkin"));
+  d.classList.add("etkin");
+  $("#bolum-" + d.dataset.bolum).classList.add("etkin");
+  if (d.dataset.bolum === "kuyruk") kuyrugYukle();
+  if (d.dataset.bolum === "hafiza") hafizaYukle();
+  if (d.dataset.bolum === "durum") durumYukle();
+  if (d.dataset.bolum === "tani") taniYukle();
+});
+
+// ---- Üst bilgi ------------------------------------------------------------
+async function ustBilgi() {
+  try {
+    const d = await al("/api/durum");
+    const rm = $("#rozet-model");
+    if (d.model.gercek && d.model.hazir) {
+      rm.textContent = "model: " + d.model.ad;
+      rm.className = "rozet iyi";
+      $("#uyari-mock").style.display = "none";
+    } else {
+      rm.textContent = "sahte model";
+      rm.className = "rozet uyari";
+      $("#uyari-mock").style.display = "block";
+    }
+    $("#rozet-hafiza").textContent = d.sayilar.kalici + " kalıcı bilgi";
+    const rk = $("#rozet-kuyruk");
+    rk.textContent = d.sayilar.bekleyen + " onay bekliyor";
+    rk.className = d.sayilar.bekleyen > 0 ? "rozet uyari" : "rozet";
+  } catch (e) {
+    $("#rozet-model").textContent = "sunucuya ulaşılamıyor";
+    $("#rozet-model").className = "rozet uyari";
+  }
+}
+
+// ---- Sohbet ---------------------------------------------------------------
+function balonEkle(sinif, metin) {
+  const b = document.createElement("div");
+  b.className = "balon " + sinif;
+  b.textContent = metin;
+  $("#konusma").appendChild(b);
+  $("#konusma").scrollTop = $("#konusma").scrollHeight;
+  return b;
+}
+
+async function gonder() {
+  const metin = $("#girdi").value.trim();
+  if (!metin) return;
+  $("#girdi").value = "";
+  $("#gonder").disabled = true;
+  balonEkle("sen", metin);
+  const bekle = balonEkle("o", "düşünüyor…");
+
+  try {
+    const c = await yolla("/api/konus", {metin});
+    if (c.hata) {
+      bekle.textContent = "Hata: " + c.hata;
+    } else {
+      bekle.textContent = c.cevap;
+      if (c.aday) {
+        balonEkle("not",
+          "[" + c.aday.no + "] numaralı aday onay kuyruğuna kondu — henüz ÖĞRENMEDİM. " +
+          "Onay Kuyruğu sekmesinden karar verebilirsin.");
+      }
+    }
+  } catch (e) {
+    bekle.textContent = "Sunucuya ulaşılamadı: " + e;
+  }
+  $("#gonder").disabled = false;
+  $("#girdi").focus();
+  ustBilgi();
+}
+$("#gonder").onclick = gonder;
+$("#girdi").onkeydown = (e) => { if (e.key === "Enter") gonder(); };
+
+// ---- Onay kuyruğu ---------------------------------------------------------
+async function kuyrugYukle() {
+  const liste = await al("/api/kuyruk");
+  const kap = $("#kuyruk-liste");
+  if (!liste.length) {
+    kap.innerHTML = '<div class="bos">Onay bekleyen bir şey yok.<br>Hafızaya hiçbir şey eklenmedi.</div>';
+    return;
+  }
+  kap.innerHTML = liste.map(a => `
+    <label class="satir">
+      <input type="checkbox" value="${a.no}">
+      <span class="no">${a.no}</span>
+      <span class="metin">${kacar(a.metin)}<br><span class="kaynak">kaynak: ${kacar(a.kaynak)}</span></span>
+    </label>`).join("");
+}
+
+async function karar(tur) {
+  const secili = $$("#kuyruk-liste input:checked").map(k => parseInt(k.value));
+  if (!secili.length) { alert("Önce kutucuklardan seç."); return; }
+  const c = await yolla("/api/karar", {numaralar: secili, karar: tur});
+  if (c.hatalar && c.hatalar.length) alert(c.hatalar.join("\n"));
+  await kuyrugYukle();
+  ustBilgi();
+}
+$("#onayla").onclick = () => karar("onayla");
+$("#reddet").onclick = () => karar("reddet");
+$("#hepsini-sec").onclick = () => {
+  const kutular = $$("#kuyruk-liste input[type=checkbox]");
+  const hepsiSecili = kutular.every(k => k.checked);
+  kutular.forEach(k => k.checked = !hepsiSecili);
+};
+
+$("#ogren").onclick = async () => {
+  const metin = $("#ogren-girdi").value.trim();
+  if (!metin) return;
+  await yolla("/api/ogren", {metin});
+  $("#ogren-girdi").value = "";
+  await kuyrugYukle();
+  ustBilgi();
+};
+$("#ogren-girdi").onkeydown = (e) => { if (e.key === "Enter") $("#ogren").click(); };
+
+$("#tohumla").onclick = async () => {
+  const c = await yolla("/api/tohumla", {});
+  alert(c.eklenen
+    ? c.eklenen + " proje kuralı kuyruğa kondu. Hiçbiri henüz öğrenilmedi — listeyi okuyup onayla."
+    : "Eklenecek yeni kural yok (hepsi zaten kuyrukta ya da hafızada).");
+  await kuyrugYukle();
+  ustBilgi();
+};
+
+// ---- Hafıza ---------------------------------------------------------------
+async function hafizaYukle() {
+  const h = await al("/api/hafiza");
+  $("#hafiza-liste").innerHTML = h.length
+    ? h.map(k => `<div class="satir"><span class="no">${k.no}</span><span class="metin">${kacar(k.metin)}</span></div>`).join("")
+    : '<div class="bos">Kalıcı hafıza boş.<br>Henüz hiçbir şey onaylamadın.</div>';
+
+  const g = await al("/api/gecmis?n=30");
+  $("#gecmis-liste").innerHTML = g.length
+    ? g.slice().reverse().map(m => `
+        <div class="satir">
+          <span class="no">${m.rol === "kullanici" ? "sen" : "o"}</span>
+          <span class="metin">${kacar(m.metin)}<br><span class="kaynak">${kacar(m.zaman.slice(0,16).replace("T"," "))}</span></span>
+        </div>`).join("")
+    : '<div class="bos">Henüz konuşma yok.</div>';
+}
+
+// ---- Durum ----------------------------------------------------------------
+const ACIKLAMALAR = {
+  aclik: "0 = tok, 100 = çok aç",
+  yorgunluk: "0 = dinç, 100 = bitkin",
+  temizlik: "0 = kirli, 100 = tertemiz",
+  yalnizlik: "0 = ilgi görmüş, 100 = çok yalnız",
+  korku: "0 = sakin, 100 = dehşette",
+  guven: "0 = güvenmiyor, 100 = tam güven"
+};
+
+async function durumYukle() {
+  const d = await al("/api/durum");
+  $("#durum-liste").innerHTML = Object.entries(d.durum).map(([alan, deger]) => `
+    <div class="durum-satir">
+      <label title="${ACIKLAMALAR[alan] || ""}">${alan}</label>
+      <input type="range" min="0" max="100" value="${deger}" data-alan="${alan}">
+      <span class="durum-deger" id="deger-${alan}">${deger}</span>
+    </div>`).join("");
+
+  $$("#durum-liste input[type=range]").forEach(c => {
+    c.oninput = () => { $("#deger-" + c.dataset.alan).textContent = c.value; };
+    c.onchange = async () => {
+      await yolla("/api/durum", {alan: c.dataset.alan, deger: parseInt(c.value)});
+    };
+  });
+}
+
+// ---- Teşhis ---------------------------------------------------------------
+async function taniYukle() {
+  $("#tani-cikti").textContent = "Kontrol ediliyor…";
+  const c = await al("/api/tani");
+  $("#tani-cikti").textContent = c.metin || c.hata || "(boş)";
+}
+$("#tani-yenile").onclick = taniYukle;
+
+// ---- Başlangıç ------------------------------------------------------------
+ustBilgi();
+setInterval(ustBilgi, 15000);
+$("#girdi").focus();
+</script>
+</body>
+</html>

@@ -9,15 +9,31 @@ Depo iki sekilde calisir:
   calisir, cevaplar anlamsizdir. Test ve gelistirme icin.
 * **Gercek modelle**: bilgisayarinda Ollama varsa `--model ollama` ile.
 
-Donanima gore model secimi ve adim adim kurulum:
+**Hic yazilim bilmiyorsan buradan basla:** [`BASLANGIC.md`](BASLANGIC.md)
+— sifirdan, tiklayarak, komut ezberlemeden.
+
+Teknik kurulum ve donanima gore model secimi:
 [`docs/faz0-kurulum.md`](docs/faz0-kurulum.md).
+
+## Gorsel arayuz
+
+```bash
+python -m web.sunucu            # tarayicida http://localhost:8000 acilir
+```
+
+Windows'ta `2-BASLAT.bat` dosyasina cift tiklamak da ayni isi yapar.
+Sekmeler: Sohbet, Onay Kuyrugu, Hafiza, Durum, Teshis. Sunucu yalnizca
+127.0.0.1'e acilir -- ayni agdaki baska bir cihaz bile goremez.
 
 ## Klasor yapisi
 
 ```
 Vrt001/
 ├── CLAUDE.md              # Proje brief'i - tum fazlarin plani
-├── cekirdek.py            # TERMINAL ARAYUZU - buradan calistirilir
+├── BASLANGIC.md           # Hic bilmeyen icin sifirdan kurulum
+├── 1-KUR.bat              # Windows: cift tikla, kurar
+├── 2-BASLAT.bat           # Windows: cift tikla, arayuzu acar
+├── cekirdek.py            # Terminal arayuzu
 ├── requirements.txt       # Bagimliliklar (su an sadece pytest)
 ├── models/
 │   └── state.py           # Durum vektoru semasi (aclik, yorgunluk, ...)
@@ -31,10 +47,13 @@ Vrt001/
 │   └── versioning.py      # Surum kaydetme ve geri_al
 ├── bilgi/
 │   └── proje_kurallari.json  # Cekirdek'in kendisi hakkinda bilmesi gerekenler
+├── web/
+│   ├── sunucu.py          # Gorsel arayuzun sunucusu (sifir bagimlilik)
+│   └── sayfa.html         # Tek sayfalik arayuz
 ├── evals/
 │   ├── eval_seti.json     # 30 soruluk sabit test
 │   └── puanla.py          # Puanlama betigi
-├── tests/                 # 315 pytest testi
+├── tests/                 # 337 pytest testi
 └── workspace/             # Sistemin yazma izni olan TEK klasor (bos baslar)
 ```
 
