@@ -68,9 +68,10 @@ def test_konusma_iki_mesaj_kaydeder(c):
 
 
 def test_bilgi_verince_aday_kuyruga_girer(c):
-    cevap = c.konus("Benim kedimin adi Pamuk")
+    sonuc = c.konus("Benim kedimin adi Pamuk")
     assert len(c.kuyruk.bekleyenler()) == 1
-    assert "onay kuyruguna kondu" in cevap
+    assert sonuc["aday"]["metin"] == "Benim kedimin adi Pamuk"
+    assert "onay kuyruguna kondu" in c.konus_metin("Kedim cok tatli")
 
 
 def test_bilgi_verince_HAFIZAYA_GIRMEZ(c):
@@ -117,6 +118,92 @@ def test_baglam_durumu_icerir(c):
 def test_baglam_modele_gercekten_gonderiliyor(c):
     c.kuyruk.onayla(c.kuyruk.ekle("Kedinin adi Pamuk").no)
     c.konus("kedimden bahset")
+    assert "Pamuk" in c.llm.gecmis[-1]["sistem"]
+
+
+# -- Gercek kullanimda cikan uc hata -----------------------------------------
+#
+# Asagidaki uc test, gelistirici arayuzu ilk kez gercek modelle kullandiginda
+# gorunen uc ayri hatadan geliyor. Uculu de ayni ekran goruntusunde vardi.
+
+
+def test_HATA1_sohbet_gecmisi_modele_gonderiliyor(c):
+    """
+    GORULEN: Kullanici kendini uzun uzun anlatti, hemen ardindan "benimle
+    ilgili ne biliyorsun?" diye sordu. Model "sen ne is yapiyorsun?" dedi --
+    bir onceki mesaji hic gormemisti.
+
+    SEBEP: Her mesaj modele tek basina gonderiliyordu, onceki siralar hic
+    gitmiyordu. Sohbetin sohbet olmasi icin gecmis de gitmeli.
+    """
+    c.konus("Benim adim Ali")
+    c.konus("Ne is yaptigimi biliyor musun")
+
+    gonderilen = c.llm.gecmis[-1]["sohbet"]
+    metinler = [m["metin"] for m in gonderilen]
+    assert "Benim adim Ali" in metinler, "onceki mesaj modele gitmemis"
+    assert any(m["rol"] == "cekirdek" for m in gonderilen), "cevaplar da gitmeli"
+
+
+def test_HATA2_model_kendi_cevabini_hatirlamiyor(c):
+    """
+    GORULEN: Iki farkli soruya BIREBIR AYNI cevap geldi.
+
+    SEBEP: Geri cagirma, Cekirdek'in kendi eski cevaplarini da buluyor ve
+    "hatirladiklarin" diye modele geri veriyordu. Model kendi cumlesini
+    gorup aynen tekrar ediyordu.
+
+    Artik geri cagirma sadece KULLANICININ soylediklerini getiriyor.
+    """
+    # Modelin eski cevabi cok ayirt edici bir kelime icersin
+    c.llm.sabit_cevap = "Zeplin marmelat kombinasyonu"
+    c.konus("kediler hakkinda ne dusunuyorsun")
+
+    # Aradan mesaj gecsin ki eskiler "son mesajlar" olmaktan ciksin
+    c.llm.sabit_cevap = "peki"
+    for _ in range(8):
+        c.konus("baska bir konu")
+
+    c.konus("kediler hakkinda ne dusunuyorsun")
+    sistem = c.llm.gecmis[-1]["sistem"]
+    assert "Zeplin marmelat" not in sistem, (
+        "Cekirdek kendi eski cevabini baglama koymus; model bunu tekrar eder"
+    )
+
+
+def test_HATA3_son_mesajlar_iki_kez_gonderilmiyor(c):
+    """
+    Son mesajlar zaten sohbet gecmisi olarak gidiyor. Bir de
+    "hatirladiklarin" diye tekrar gonderilirse model ayni metni iki kez
+    gorur ve kafasi karisir.
+    """
+    c.konus("Yarin Ankara ya gidecegim")
+    c.konus("Ankara ya ne zaman gidiyordum")
+
+    sistem = c.llm.gecmis[-1]["sistem"]
+    sohbet = [m["metin"] for m in c.llm.gecmis[-1]["sohbet"]]
+
+    assert "Yarin Ankara ya gidecegim" in sohbet          # gecmiste var
+    assert "Yarin Ankara ya gidecegim" not in sistem      # baglamda YOK
+
+
+def test_gecmis_sinirli_tutuluyor(c):
+    """8 GB ekran kartinda baglami sisirmemek icin ust sinir var."""
+    for i in range(20):
+        c.konus(f"mesaj {i}")
+    assert len(c.llm.gecmis[-1]["sohbet"]) <= uygulama.SOHBET_GECMISI
+
+
+def test_eski_konusma_hala_hatirlaniyor(c):
+    """
+    Duzeltmeler geri cagirmayi bozmamali: yeterince eski bir kullanici
+    mesaji hala bulunabilmeli.
+    """
+    c.konus("Kedimin adi Pamuk ve tekir bir kedi")
+    for _ in range(8):
+        c.konus("alakasiz bir konu")
+
+    c.konus("kedimin adi neydi")
     assert "Pamuk" in c.llm.gecmis[-1]["sistem"]
 
 

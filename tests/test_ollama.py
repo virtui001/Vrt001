@@ -171,6 +171,34 @@ def test_sistem_metni_yoksa_gonderilmez(sunucu):
     assert mesajlar[0]["role"] == "user"
 
 
+def test_sohbet_gecmisi_dogru_rollerle_gonderilir(sunucu):
+    """
+    Bizim "cekirdek" dedigimize Ollama "assistant" diyor. Yanlis
+    eslestirirsek model kendi sozlerini kullanicinin sozu saniyor.
+    """
+    OllamaLLM(sunucu=sunucu).cevapla(
+        "son soru",
+        sistem="kural",
+        gecmis=[
+            {"rol": "kullanici", "metin": "eski soru"},
+            {"rol": "cekirdek", "metin": "eski cevap"},
+        ],
+    )
+    mesajlar = SahteOllama.gelen_istekler[-1]["govde"]["messages"]
+    assert [m["role"] for m in mesajlar] == ["system", "user", "assistant", "user"]
+    assert mesajlar[1]["content"] == "eski soru"
+    assert mesajlar[2]["content"] == "eski cevap"
+    assert mesajlar[3]["content"] == "son soru"
+
+
+def test_bos_gecmis_mesaji_atlanir(sunucu):
+    OllamaLLM(sunucu=sunucu).cevapla(
+        "soru", gecmis=[{"rol": "kullanici", "metin": "   "}]
+    )
+    mesajlar = SahteOllama.gelen_istekler[-1]["govde"]["messages"]
+    assert len(mesajlar) == 1
+
+
 def test_akis_kapali_isteniyor(sunucu):
     """stream=False: cevabi harf harf degil, tek seferde aliyoruz."""
     OllamaLLM(sunucu=sunucu).cevapla("soru")

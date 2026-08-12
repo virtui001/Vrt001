@@ -74,7 +74,8 @@ def test_mock_sorulanlari_kaydeder():
     m.cevapla("ilk", sistem="kural")
     m.cevapla("ikinci")
     assert len(m.gecmis) == 2
-    assert m.gecmis[0] == {"istem": "ilk", "sistem": "kural"}
+    assert m.gecmis[0]["istem"] == "ilk"
+    assert m.gecmis[0]["sistem"] == "kural"
     assert m.gecmis[1]["sistem"] is None
 
 

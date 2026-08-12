@@ -298,7 +298,40 @@ def test_baglam_metni_bulunani_yazar(hafiza):
     hafiza.ekle(KULLANICI, "Kedimin adi Pamuk")
     metin = hafiza.baglam_metni("kedimin adi neydi")
     assert "Pamuk" in metin
-    assert "hatirladiklarin" in metin.lower()
+    assert "gecmiste soyledikleri" in metin.lower()
+
+
+def test_sadece_kullanici_secenegi_cekirdegi_eler(hafiza):
+    """
+    Cekirdek'in kendi cevaplarini "hatirladiklarin" diye geri vermek,
+    modelin kendini tekrar etmesine yol aciyordu. Gercekten yasandi.
+    """
+    hafiza.ekle(KULLANICI, "Kedimin adi Pamuk")
+    hafiza.ekle(CEKIRDEK, "Kedimin adi Pamuk, ne guzel")
+
+    hepsi = hafiza.hatirla("kedi", kac=5)
+    sadece = hafiza.hatirla("kedi", kac=5, sadece_kullanici=True)
+
+    assert len(hepsi) == 2
+    assert len(sadece) == 1
+    assert sadece[0][0].rol == KULLANICI
+
+
+def test_haric_verilen_mesajlar_atlanir(hafiza):
+    """Son mesajlar zaten sohbet gecmisi olarak gidiyor; iki kez gitmesin."""
+    m1 = hafiza.ekle(KULLANICI, "Kedimin adi Pamuk")
+    hafiza.ekle(KULLANICI, "Kedim cok tatli")
+
+    assert len(hafiza.hatirla("kedi", kac=5)) == 2
+    assert len(hafiza.hatirla("kedi", kac=5, haric={m1.no})) == 1
+
+
+def test_baglam_metni_sadece_kullaniciyi_yazar(hafiza):
+    hafiza.ekle(KULLANICI, "Kedimin adi Pamuk")
+    hafiza.ekle(CEKIRDEK, "Zeplin marmelat kombinasyonu kedi")
+    metin = hafiza.baglam_metni("kedi")
+    assert "Pamuk" in metin
+    assert "Zeplin" not in metin
 
 
 def test_baglam_metni_bulamayinca_bos(hafiza):

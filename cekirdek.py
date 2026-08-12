@@ -49,11 +49,29 @@ from core.ollama_baglanti import VARSAYILAN_SUNUCU
 from core.terminal import utf8_cikti
 from models.state import Durum, kaydet as durum_kaydet, yukle_veya_varsayilan
 
+# Modele verilen karakter talimati.
+#
+# ILK SURUM SOYLEYDI ve KOTUYDU:
+#   "Bilmedigin seyi uydurma, bilmiyorum de. Asagida sana verilen bilgiler
+#    disinda bir sey biliyormus gibi yapma."
+# Kucuk modeller bu kadar cok olumsuz talimati "her cumleye Hayir diye basla"
+# seklinde anliyor. Gercekten yasandi: "Orada misin?" sorusuna model
+# "Hayir, buradayim!" diye cevap verdi.
+#
+# Simdiki hali olumlu cumlelerle yaziyor: ne YAPMAMASI degil, ne YAPMASI
+# gerektigini soyluyor.
 SISTEM_METNI = (
-    "Sen Cekirdek adli bir asistansin. Kisa, net ve Turkce konus. "
-    "Bilmedigin seyi uydurma, bilmiyorum de. "
-    "Asagida sana verilen bilgiler disinda bir sey biliyormus gibi yapma."
+    "Sen Cekirdek adlisin. Turkce konusuyorsun ve karsindaki kisiyle "
+    "sohbet ediyorsun.\n"
+    "Dogal ve samimi konus, kisa tut: en fazla 2-3 cumle.\n"
+    "Asagida hafizandaki bilgiler var; kisiyle ilgili bir sey sorulursa "
+    "once oraya bak ve oradaki bilgiyi kullan.\n"
+    "Hafizanda olmayan bir sey sorulursa sadece o konuda 'bunu bilmiyorum' de."
 )
+
+# Modele kac onceki mesaj gonderilecek? (kullanici + cevap ciftleri)
+# Cok fazlasi 8 GB ekran kartinda baglami sisirir ve yavaslatir.
+SOHBET_GECMISI = 6
 
 # Kullanicinin cumlesinde bunlardan biri geciyorsa "burada ogrenilecek bir sey
 # olabilir" deriz ve ADAY olarak kuyruga koyariz -- ogrenmeyiz.
@@ -106,19 +124,23 @@ class Cekirdek:
 
     # -- Baglam kurma --------------------------------------------------------
 
-    def baglam(self, soru: str) -> str:
+    def baglam(self, soru: str, haric: set[int] | None = None) -> str:
         """
         Modele verilecek sistem metnini kurar:
-        sabit talimat + onaylanmis bilgiler + hatirlanan konusmalar + durum.
+        sabit talimat + onaylanmis bilgiler + eski konusmalar + durum.
+
+        haric: bu numarali mesajlar geri cagirmaya girmez. Son mesajlar zaten
+        sohbet gecmisi olarak ayrica gonderiliyor; iki kez gondermek modeli
+        kendini tekrar etmeye itiyor.
         """
         parcalar = [SISTEM_METNI]
 
         onaylanmis = self.kuyruk.hafiza()
         if onaylanmis:
             satirlar = "\n".join(f"- {k['metin']}" for k in onaylanmis)
-            parcalar.append("Onaylanmis kalici bilgiler:\n" + satirlar)
+            parcalar.append("Hafizandaki bilgiler:\n" + satirlar)
 
-        hatirlanan = self.hafiza.baglam_metni(soru)
+        hatirlanan = self.hafiza.baglam_metni(soru, haric=haric)
         if hatirlanan:
             parcalar.append(hatirlanan)
 
@@ -127,22 +149,49 @@ class Cekirdek:
 
     # -- Sohbet --------------------------------------------------------------
 
-    def konus(self, girdi: str) -> str:
-        """Bir mesaji bastan sona isler ve cevabi dondurur."""
+    def konus(self, girdi: str) -> dict:
+        """
+        Bir mesaji bastan sona isler.
+
+        Doner: {"cevap": ..., "sure_sn": ..., "aday": {"no","metin"}|None}
+        Sozluk donuyor ki hem terminal hem web arayuzu ayni yolu kullansin.
+        (Onceden web sunucusu bu mantigi kopyalamisti; iki yerde ayri ayri
+        duran kod, iki yerde ayri ayri bozulur.)
+        """
         self.hafiza.ekle(KULLANICI, girdi)
-        cevap = self.llm.cevapla(girdi, sistem=self.baglam(girdi))
+
+        # Son mesajlar sohbet gecmisi olarak gidiyor. Sonuncusu az once
+        # eklenen sorunun kendisi, onu gecmise koymuyoruz.
+        son_mesajlar = self.hafiza.son(SOHBET_GECMISI + 1)
+        gecmis = [
+            {"rol": m.rol, "metin": m.metin} for m in son_mesajlar[:-1]
+        ]
+        haric = {m.no for m in son_mesajlar}
+
+        cevap = self.llm.cevapla(
+            girdi, sistem=self.baglam(girdi, haric=haric), gecmis=gecmis
+        )
         self.hafiza.ekle(CEKIRDEK, cevap.metin)
 
-        aday = aday_oner(girdi)
-        if aday:
-            kayit = self.kuyruk.ekle(aday, kaynak="konusma")
+        sonuc = {"cevap": cevap.metin, "sure_sn": cevap.sure_sn, "aday": None}
+
+        onerilen = aday_oner(girdi)
+        if onerilen:
+            kayit = self.kuyruk.ekle(onerilen, kaynak="konusma")
             if kayit.durum == "bekliyor":
-                return (
-                    f"{cevap.metin}\n"
-                    f"   (not: [{kayit.no}] numarali aday onay kuyruguna kondu, "
-                    f"HENUZ ogrenmedim. /listele ile bakabilirsin.)"
-                )
-        return cevap.metin
+                sonuc["aday"] = {"no": kayit.no, "metin": kayit.metin}
+        return sonuc
+
+    def konus_metin(self, girdi: str) -> str:
+        """Terminal icin: konus() sonucunu tek metne cevirir."""
+        s = self.konus(girdi)
+        if s["aday"]:
+            return (
+                f"{s['cevap']}\n"
+                f"   (not: [{s['aday']['no']}] numarali aday onay kuyruguna kondu, "
+                f"HENUZ ogrenmedim. /listele ile bakabilirsin.)"
+            )
+        return s["cevap"]
 
     # -- Komutlar ------------------------------------------------------------
 
@@ -356,7 +405,7 @@ def main(argv: list[str] | None = None, girdi=input, yazdir=print) -> int:
                 return 0
             yazdir(c.komut(satir))
         else:
-            yazdir("cekirdek> " + c.konus(satir))
+            yazdir("cekirdek> " + c.konus_metin(satir))
         yazdir("")
 
 

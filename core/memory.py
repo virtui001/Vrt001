@@ -387,7 +387,12 @@ class Hafiza:
         return len(self._oku())
 
     def hatirla(
-        self, soru: str, kac: int = 3, esik: float = 0.10
+        self,
+        soru: str,
+        kac: int = 3,
+        esik: float = 0.10,
+        haric: set[int] | None = None,
+        sadece_kullanici: bool = False,
     ) -> list[tuple[Mesaj, float]]:
         """
         Soruya en cok benzeyen gecmis mesajlari bulur.
@@ -398,6 +403,13 @@ class Hafiza:
                0.10 secildi cunku olctugumuzde gercek eslesmeler 0.17 ve
                uzerinde, carpisma kaynakli sahte benzerlikler ise 0.09'un
                altinda kaldi. Esik tam aradaki bosluga konuldu.
+        haric: bu numarali mesajlar aranmaz. Son birkac mesaj zaten sohbet
+               gecmisi olarak modele gidiyor; bir de "hatirladiklarin" diye
+               tekrar gonderirsek model ayni metni iki kez gorur.
+        sadece_kullanici: sadece kullanicinin soyledikleri aransin.
+               Cekirdek'in kendi eski cevaplarini "hatirladiklarin" diye geri
+               vermek KOTU sonuc veriyor: model kendi cevabini gorup aynen
+               tekrar ediyordu. Gercekten yasandi, bkz. tests/test_memory.py.
 
         Doner: [(mesaj, benzerlik_puani), ...] en benzerden baslayarak.
         """
@@ -406,8 +418,13 @@ class Hafiza:
 
         soru_vektoru = self.gomucu.gom(soru)
         sonuclar: list[tuple[Mesaj, float]] = []
+        haric = haric or set()
 
         for mesaj in self.tumu():
+            if mesaj.no in haric:
+                continue
+            if sadece_kullanici and mesaj.rol != KULLANICI:
+                continue
             # Gomucu degistiyse (ornegin Ollama'ya gecildiyse) diskteki eski
             # vektor gecersizdir; o mesajin gommesini anlik yeniden hesapliyoruz.
             if mesaj.gomucu == self.gomucu.ad and mesaj.boyut == self.gomucu.boyut:
@@ -422,16 +439,26 @@ class Hafiza:
         sonuclar.sort(key=lambda ikili: (ikili[1], ikili[0].no), reverse=True)
         return sonuclar[:kac]
 
-    def baglam_metni(self, soru: str, kac: int = 3) -> str:
+    def baglam_metni(
+        self, soru: str, kac: int = 3, haric: set[int] | None = None
+    ) -> str:
         """
         Geri cagrilan mesajlari, modele verilecek duz metne cevirir.
         Hicbir sey bulunamazsa BOS METIN doner -- uydurma baglam eklemeyiz.
+
+        Sadece KULLANICININ eski sozlerini getirir. Cekirdek'in kendi eski
+        cevaplarini geri vermek modeli kendi kendini tekrar etmeye itiyor.
         """
-        bulunanlar = self.hatirla(soru, kac=kac)
+        bulunanlar = self.hatirla(
+            soru, kac=kac, haric=haric, sadece_kullanici=True
+        )
         if not bulunanlar:
             return ""
-        satirlar = [f"- {m.satir()}" for m, _ in bulunanlar]
-        return "Gecmis konusmalardan hatirladiklarin:\n" + "\n".join(satirlar)
+        satirlar = [f"- {m.metin}" for m, _ in bulunanlar]
+        return (
+            "Kullanicinin gecmiste soyledikleri (eski konusmalardan):\n"
+            + "\n".join(satirlar)
+        )
 
     def temizle(self) -> int:
         """

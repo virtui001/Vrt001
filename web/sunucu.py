@@ -198,40 +198,24 @@ class Islemci(BaseHTTPRequestHandler):
         }
 
     def _konus(self, metin: str) -> dict:
+        """
+        Sohbet. Isin kendisini Cekirdek.konus() yapiyor -- burada sadece
+        siyah pencereye ilerleme yaziyoruz. Mantigi burada tekrar yazmak
+        (once oyleydi) iki yerde ayri ayri bozulmaya yol aciyordu.
+        """
         metin = (metin or "").strip()
         if not metin:
             return {"hata": "Bos mesaj"}
 
-        c = cekirdek_al()
+        self._kayit(f"> soru alindi: {metin[:60]}")
         basla = time.perf_counter()
 
-        # Her adimi ayri ayri yaziyoruz: takilirsa hangi adimda takildigi
-        # siyah pencerede gorunsun.
-        self._kayit(f"> soru alindi: {metin[:60]}")
+        sonuc = cekirdek_al().konus(metin)
 
-        c.hafiza.ekle(KULLANICI, metin)
-        baglam = c.baglam(metin)
-        self._kayit(f"  hatirlama tamam ({time.perf_counter() - basla:.1f} sn), modele soruluyor...")
-
-        cevap = c.llm.cevapla(metin, sistem=baglam)
         self._kayit(
-            f"< cevap geldi ({cevap.sure_sn} sn, "
-            f"{cevap.ek_bilgi.get('uretilen_parca', '?')} parca)"
+            f"< cevap geldi ({time.perf_counter() - basla:.1f} sn)"
+            + (f" | aday [{sonuc['aday']['no']}] kuyruga kondu" if sonuc.get("aday") else "")
         )
-
-        c.hafiza.ekle(CEKIRDEK, cevap.metin)
-
-        sonuc = {
-            "cevap": cevap.metin,
-            "sure_sn": cevap.sure_sn,
-            "aday": None,
-        }
-
-        onerilen = aday_oner(metin)
-        if onerilen:
-            kayit = c.kuyruk.ekle(onerilen, kaynak="arayuz")
-            if kayit.durum == "bekliyor":
-                sonuc["aday"] = {"no": kayit.no, "metin": kayit.metin}
         return sonuc
 
     def _karar(self, govde: dict) -> dict:

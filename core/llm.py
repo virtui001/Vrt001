@@ -66,11 +66,26 @@ class LLM(ABC):
     ad: str = "llm"
 
     @abstractmethod
-    def cevapla(self, istem: str, sistem: str | None = None) -> Cevap:
+    def cevapla(
+        self,
+        istem: str,
+        sistem: str | None = None,
+        gecmis: list[dict] | None = None,
+    ) -> Cevap:
         """
-        istem  : kullanicinin sorusu / verilen gorev metni.
+        istem  : kullanicinin su anki sorusu.
         sistem : modele karakter/kural veren gizli talimat (istege bagli).
+        gecmis : onceki konusma sirasi. [{"rol": "kullanici"|"cekirdek",
+                 "metin": ...}, ...] En eskiden yeniye sirali.
+
         Doner  : Cevap nesnesi.
+
+        GECMIS NEDEN VAR?
+        Ilk surumde yoktu ve model her mesaji sifirdan goruyordu. Kullanici
+        kendini anlatiyor, hemen ardindan "benimle ilgili ne biliyorsun?"
+        diye soruyor ve model "sen ne is yapiyorsun?" diye cevap veriyordu --
+        cunku bir onceki mesaji hic gormemisti. Sohbetin sohbet olmasi icin
+        onceki siralar da gonderilmek zorunda.
         """
         raise NotImplementedError
 
@@ -115,8 +130,13 @@ class MockLLM(LLM):
         # Kendisine sorulan her seyi saklar; testte "ne soruldu" diye bakariz.
         self.gecmis: list[dict[str, str | None]] = []
 
-    def cevapla(self, istem: str, sistem: str | None = None) -> Cevap:
-        self.gecmis.append({"istem": istem, "sistem": sistem})
+    def cevapla(
+        self,
+        istem: str,
+        sistem: str | None = None,
+        gecmis: list[dict] | None = None,
+    ) -> Cevap:
+        self.gecmis.append({"istem": istem, "sistem": sistem, "sohbet": gecmis or []})
 
         anahtar = sadelestir(istem)
         for soru, cevap in self.cevaplar.items():
@@ -168,10 +188,23 @@ class OllamaLLM(LLM):
         # 400 parca ~ yarim sayfa; sohbet icin fazlasiyla yeterli.
         self.azami_parca = azami_parca
 
-    def cevapla(self, istem: str, sistem: str | None = None) -> Cevap:
+    def cevapla(
+        self,
+        istem: str,
+        sistem: str | None = None,
+        gecmis: list[dict] | None = None,
+    ) -> Cevap:
         mesajlar = []
         if sistem:
             mesajlar.append({"role": "system", "content": sistem})
+
+        # Onceki siralar. Bizim "cekirdek" dedigimize Ollama "assistant" diyor.
+        for eski in gecmis or []:
+            rol = "assistant" if eski.get("rol") == "cekirdek" else "user"
+            metin = (eski.get("metin") or "").strip()
+            if metin:
+                mesajlar.append({"role": rol, "content": metin})
+
         mesajlar.append({"role": "user", "content": istem})
 
         basla = time.perf_counter()
