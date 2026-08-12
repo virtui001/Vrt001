@@ -25,9 +25,10 @@ KOMUTLAR (/ ile baslar; / ile baslamayan her sey sohbettir):
     /durum               durum vektorunu goster
     /durum aclik 40      bir alani ayarla ve kaydet
     /ogren <metin>       elle aday ekle (onay kuyruguna)
+    /tohumla             proje kurallarini kuyruga koy
     /listele             onay bekleyen adaylar
-    /onayla <no>         adayi hafizaya al
-    /reddet <no>         adayi sil
+    /onayla <no...>      adaylari hafizaya al (3 / 1 4 7 / 1-18)
+    /reddet <no...>      adaylari sil
     /hafiza              onaylanmis kalici bilgiler
     /hatirla <soru>      gecmis konusmalarda ara
     /gecmis [n]          son n mesaj (varsayilan 10)
@@ -39,7 +40,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from core.approval import OnayKuyrugu
+from core.approval import OnayKuyrugu, numaralari_oku
 from core.guvenlik import WORKSPACE
 from core.llm import LLM, llm_olustur
 from core.memory import CEKIRDEK, KULLANICI, Hafiza, OllamaGomucu
@@ -180,21 +181,38 @@ class Cekirdek:
         if ad == "listele":
             return self.kuyruk.listele()
 
+        if ad == "tohumla":
+            yeniler = self.kuyruk.tohumla()
+            if not yeniler:
+                return "Eklenecek yeni kural yok (hepsi zaten kuyrukta ya da hafizada)."
+            satirlar = [
+                f"{len(yeniler)} proje kurali onay kuyruguna kondu.",
+                "Hicbiri HENUZ ogrenilmedi. /listele ile oku, sonra onayla.",
+                f"Hepsini kabul ediyorsan: /onayla {yeniler[0].no}-{yeniler[-1].no}",
+            ]
+            return "\n".join(satirlar)
+
         if ad in ("onayla", "reddet"):
             if not arg:
-                return f"Kullanim: /{ad} <no>"
+                return f"Kullanim: /{ad} <no>   (ornek: /{ad} 3 ya da /{ad} 1-18)"
             try:
-                no = int(arg[0])
-            except ValueError:
-                return f"'{arg[0]}' bir numara degil."
-            try:
-                if ad == "onayla":
-                    kayit = self.kuyruk.onayla(no)
-                    return f"Ogrenildi (artik kalici): {kayit['metin']}"
-                aday = self.kuyruk.reddet(no, sebep=" ".join(arg[1:]))
-                return f"Silindi, hafizaya girmedi: {aday.metin}"
-            except KeyError as hata:
+                # "/onayla 1 4 7" ve "/onayla 1-18" bicimleri de calissin.
+                numaralar = numaralari_oku(["", *arg] if ad == "onayla" else ["", arg[0]])
+            except ValueError as hata:
                 return f"Hata: {hata}"
+
+            satirlar = []
+            for no in numaralar:
+                try:
+                    if ad == "onayla":
+                        kayit = self.kuyruk.onayla(no)
+                        satirlar.append(f"Ogrenildi (artik kalici): [{no}] {kayit['metin'][:70]}")
+                    else:
+                        aday = self.kuyruk.reddet(no, sebep=" ".join(arg[1:]))
+                        satirlar.append(f"Silindi, hafizaya girmedi: [{no}] {aday.metin[:70]}")
+                except KeyError as hata:
+                    satirlar.append(f"Hata: {hata}")
+            return "\n".join(satirlar)
 
         if ad == "hafiza":
             kayitlar = self.kuyruk.hafiza()
@@ -236,9 +254,10 @@ YARDIM = """Komutlar:
   /durum                 durum vektorunu goster
   /durum <alan> <deger>  bir alani ayarla (ornek: /durum aclik 40)
   /ogren <metin>         elle aday ekle (onay kuyruguna)
+  /tohumla               proje kurallarini kuyruga koy
   /listele               onay bekleyen adaylar
-  /onayla <no>           adayi hafizaya al
-  /reddet <no>           adayi sil
+  /onayla <no...>        adaylari hafizaya al (3 / 1 4 7 / 1-18)
+  /reddet <no...>        adaylari sil
   /hafiza                onaylanmis kalici bilgiler
   /hatirla <soru>        gecmis konusmalarda ara
   /gecmis [n]            son n mesaj

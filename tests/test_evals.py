@@ -219,6 +219,46 @@ def test_puan_yukselince_bildirir(tmp_path, monkeypatch, capsys):
     assert "Puan yukseldi" in capsys.readouterr().out
 
 
+def test_kalici_bilgiler_baglama_eklenir(sorular):
+    """
+    --hafiza secenegi: onaydan gecmis bilgiler modele gitmeli.
+    Bu olmadan kurallari onaylamanin sinava hicbir etkisi olmazdi.
+    """
+    model = llm_olustur("mock")
+    calistir(model, sorular, kalici_bilgiler="- Kedinin adi Pamuk")
+    assert all("Kedinin adi Pamuk" in (g["sistem"] or "") for g in model.gecmis)
+
+
+def test_kalici_bilgi_verilmezse_baglamda_yok(sorular):
+    model = llm_olustur("mock")
+    calistir(model, sorular)
+    assert all("kalici bilgiler" not in (g["sistem"] or "") for g in model.gecmis)
+
+
+def test_komut_hafiza_secenegi_kuyruktan_okur(tmp_path, monkeypatch, capsys):
+    """--hafiza, onay kuyrugundaki gercek hafizayi kullanmali."""
+    from core import approval, guvenlik
+
+    monkeypatch.setattr(approval, "WORKSPACE", tmp_path)
+    monkeypatch.setattr(guvenlik, "WORKSPACE", tmp_path)
+    kuyruk = approval.OnayKuyrugu(klasor=tmp_path, izinli_kok=tmp_path)
+    kuyruk.onayla(kuyruk.ekle("Kedinin adi Pamuk").no)
+    kuyruk.onayla(kuyruk.ekle("Kullanici sabahlari cay icer").no)
+    kuyruk.ekle("Bu aday ONAYLANMADI")  # baglama girmemeli
+
+    assert main(["--cevap-anahtari", "--hafiza"]) == 0
+    cikti = capsys.readouterr().out
+    assert "2 kalici bilgi baglama eklendi" in cikti  # kuyruktan gercekten okudu
+
+
+def test_komut_hafiza_bossa_uyarir(tmp_path, monkeypatch, capsys):
+    from core import approval
+
+    monkeypatch.setattr(approval, "WORKSPACE", tmp_path)
+    main(["--hafiza", "--sessiz"])
+    assert "tohumla" in capsys.readouterr().out
+
+
 def test_son_puan_dosyasi_yoksa_none(tmp_path):
     assert son_puani_oku(tmp_path / "yok.json") is None
 

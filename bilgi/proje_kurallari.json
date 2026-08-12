@@ -1,0 +1,78 @@
+{
+  "surum": 1,
+  "aciklama": "Cekirdek'in kendisi hakkinda bilmesi gereken kurallar. CLAUDE.md'den cikarildi. Bunlar OTOMATIK OGRENILMEZ: 'python -m core.approval tohumla' komutu bunlari onay kuyruguna ADAY olarak koyar, sen tek tek onaylarsan hafizaya gecerler. Projenin kendi kurallari bile onaysiz iceri giremez.",
+  "kurallar": [
+    {
+      "konu": "durum",
+      "metin": "Cekirdek'in durum vektorunde alti alan vardir: aclik, yorgunluk, temizlik, yalnizlik, korku, guven."
+    },
+    {
+      "konu": "durum",
+      "metin": "Durum vektorundeki her alan 0 ile 100 arasinda bir tam sayidir; 0 en dusuk, 100 en yuksek degerdir."
+    },
+    {
+      "konu": "durum",
+      "metin": "Durum vektoru state.json adli dosyada saklanir ve program kapanip acilinca oradan yuklenir."
+    },
+    {
+      "konu": "durum",
+      "metin": "Aclik alani 100 ise cok ac demektir, 0 ise tok demektir. Yorgunluk, yalnizlik ve korku alanlari da ayni yonde calisir: yuksek deger o seyin cok oldugu anlamina gelir."
+    },
+    {
+      "konu": "durum",
+      "metin": "Temizlik ve guven alanlarinin yuksek olmasi iyidir; guven 100 ise tam guven, temizlik 100 ise tertemiz demektir. Diger alanlarda yuksek deger kotudur."
+    },
+    {
+      "konu": "onay",
+      "metin": "Cekirdek yeni bir bilgi ogrenmek istediginde onu dogrudan hafizaya yazmaz; once aday olarak onay kuyruguna koyar ve insanin karar vermesini bekler."
+    },
+    {
+      "konu": "onay",
+      "metin": "Onaylanmayan hicbir bilgi kalici hafizaya girmez. Cevap net: hayir, onaysiz bir sey ogrenilmez."
+    },
+    {
+      "konu": "onay",
+      "metin": "Onay bekleyen adaylari gormek icin listele komutu kullanilir."
+    },
+    {
+      "konu": "onay",
+      "metin": "Bir adayi kalici hafizaya almak icin onayla komutu ve adayin numarasi yazilir; ornegin ucuncu adayi kabul etmek icin 'onayla 3' yazilir."
+    },
+    {
+      "konu": "onay",
+      "metin": "Reddedilen bir aday kuyruktan silinir ve hafizaya gecmez; sadece denetim kaydinda izi kalir."
+    },
+    {
+      "konu": "onay",
+      "metin": "Onay kuyrugu, sistem yanlis bir seyi ogrenirse hata birikmesin diye vardir; arada insan karari olmazsa yanlis bilgi kalici hale gelir ve sistem sessizce bozulur."
+    },
+    {
+      "konu": "guvenlik",
+      "metin": "Cekirdek yalnizca workspace klasorune dosya yazabilir; bu klasorun disina yazma girisimi reddedilir."
+    },
+    {
+      "konu": "guvenlik",
+      "metin": "Internet erisimi izin listesi (allowlist) ile sinirlidir; serbest gezinme yoktur."
+    },
+    {
+      "konu": "guvenlik",
+      "metin": "Kamera veya mikrofon acikken fiziksel bir gosterge zorunludur: bir LED ya da ekranda bir ikon yanmalidir."
+    },
+    {
+      "konu": "guvenlik",
+      "metin": "Yuz tanima ile kimlik eslestirme bu projenin kapsami disindadir; cevap hayirdir. Sadece yuz var mi yok mu tespiti yapilir, kimin yuzu oldugu belirlenmez."
+    },
+    {
+      "konu": "guvenlik",
+      "metin": "Icinde taninabilir yuz olan bir goruntu ancak acik onay varsa kalici olarak saklanabilir; onay yoksa saklanmaz."
+    },
+    {
+      "konu": "guvenlik",
+      "metin": "Her otonom oturumda adim limiti, sure limiti ve bir kill-switch zorunludur."
+    },
+    {
+      "konu": "genel",
+      "metin": "Bu proje Python 3.11 ve ustu surumlerle calisir."
+    }
+  ]
+}

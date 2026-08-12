@@ -105,19 +105,24 @@ def soruyu_puanla(soru: dict, cevap_metni: str) -> dict:
     return {"gecti": gecti, "sebep": sebep, "bulunan": bulunan, "eksik": eksik}
 
 
-def calistir(llm: LLM, sorular: list[dict]) -> dict:
+def calistir(llm: LLM, sorular: list[dict], kalici_bilgiler: str = "") -> dict:
     """
     Tum sorulari modele sorar ve rapor sozlugu dondurur.
     Rapor: toplam puan, kategori kirilimi, her sorunun sonucu.
+
+    kalici_bilgiler : onay kuyrugundan gecmis bilgiler (--hafiza secenegi).
+        Bos birakilirsa sinav modelin HAM halini olcer. Doldurulursa
+        SISTEMIN halini olcer: hatirlama boru hatti isini yapiyor mu?
+        Iki olcum farkli seyler soyler, ikisi de gerekli.
     """
     sonuclar: list[dict] = []
     basla = time.perf_counter()
 
     for soru in sorular:
-        # Soruya ait "baglam" varsa sistem metnine ekleniyor.
-        # Faz 1'in ilerleyen adiminda burasi vektor veritabanindan gelen
-        # gercek hatirlanan parcalarla doldurulacak. Sema simdiden hazir.
         sistem = SISTEM_METNI
+        if kalici_bilgiler:
+            sistem += "\n\nOnaylanmis kalici bilgiler:\n" + kalici_bilgiler
+        # Soruya ait "baglam", o soruya ozel hatirlanan konusma parcasidir.
         if soru.get("baglam"):
             sistem += "\n\nHatirladiklarin:\n" + soru["baglam"]
 
@@ -220,6 +225,12 @@ def main(argv: list[str] | None = None) -> int:
         help="MockLLM'e ornek cevaplari ogretir. Puanlayicinin dogru calistigini "
              "gormek icin: 30/30 beklenir.",
     )
+    p.add_argument(
+        "--hafiza",
+        action="store_true",
+        help="Onaylanmis kalici bilgileri de baglama ekle. Modelin ham halini "
+             "degil, SISTEMIN halini olcer.",
+    )
     p.add_argument("--esik", type=int, default=None, help="Bu puanin altinda hata koduyla cik")
     p.add_argument("--kaydet", action="store_true", help="Puani workspace'e kaydet ve karsilastir")
     p.add_argument("--sessiz", action="store_true", help="Sadece puan satirini bas")
@@ -251,7 +262,26 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    rapor = calistir(llm, sorular)
+    # --hafiza: onay kuyrugundan gecmis bilgileri baglama ekle.
+    # Ice aktarma burada: eval, onay kuyruguna sadece bu secenek kullanilinca
+    # bagimli olsun.
+    kalici = ""
+    if args.hafiza:
+        from core.approval import OnayKuyrugu
+
+        kayitlar = OnayKuyrugu().hafiza()
+        if not kayitlar:
+            print(
+                "Kalici hafiza bos, --hafiza secenegi bir sey eklemiyor.\n"
+                "Proje kurallarini yuklemek icin:\n"
+                "  python -m core.approval tohumla\n"
+                "  python -m core.approval onayla 1-18   (once listeye bak)"
+            )
+        kalici = "\n".join(f"- {k['metin']}" for k in kayitlar)
+        if not args.sessiz:
+            print(f"({len(kayitlar)} kalici bilgi baglama eklendi)\n")
+
+    rapor = calistir(llm, sorular, kalici_bilgiler=kalici)
 
     if args.sessiz:
         print(f"PUAN: {rapor['gecen']}/{rapor['toplam']} (%{rapor['yuzde']})")

@@ -29,10 +29,12 @@ Vrt001/
 │   ├── memory.py          # Konusma gunlugu + geri cagirma
 │   ├── approval.py        # Onay kuyrugu - onaysiz hicbir sey ogrenilmez
 │   └── versioning.py      # Surum kaydetme ve geri_al
+├── bilgi/
+│   └── proje_kurallari.json  # Cekirdek'in kendisi hakkinda bilmesi gerekenler
 ├── evals/
 │   ├── eval_seti.json     # 30 soruluk sabit test
 │   └── puanla.py          # Puanlama betigi
-├── tests/                 # 261 pytest testi
+├── tests/                 # 293 pytest testi
 └── workspace/             # Sistemin yazma izni olan TEK klasor (bos baslar)
 ```
 
@@ -59,9 +61,10 @@ Acilista hafizasini yukler, tek satir bilgi yazar ve **sessizce bekler**.
 | `/durum` | durum vektorunu gosterir |
 | `/durum aclik 40` | bir alani ayarlar ve kaydeder |
 | `/ogren <metin>` | onay kuyruguna aday ekler (**ogrenmez**) |
+| `/tohumla` | proje kurallarini onay kuyruguna koyar |
 | `/listele` | onay bekleyen adaylar |
-| `/onayla <no>` | adayi kalici hafizaya alir |
-| `/reddet <no>` | adayi siler |
+| `/onayla <no...>` | adaylari kalici hafizaya alir (`3`, `1 4 7`, `1-18`) |
+| `/reddet <no...>` | adaylari siler |
 | `/hafiza` | onaylanmis kalici bilgiler |
 | `/hatirla <soru>` | gecmis konusmalarda arar |
 | `/gecmis [n]` | son n mesaj |
@@ -71,8 +74,9 @@ Acilista hafizasini yukler, tek satir bilgi yazar ve **sessizce bekler**.
 
 ```bash
 # Onay kuyrugu
+python -m core.approval tohumla       # proje kurallarini kuyruga koyar
 python -m core.approval listele
-python -m core.approval onayla 1
+python -m core.approval onayla 1-18   # "onayla hepsi" diye bir sey YOK
 
 # Surum yonetimi (once eval'i calistirir, puan dusukse commit atmaz)
 python -m core.versioning listele
@@ -83,7 +87,8 @@ python -m core.versioning geri_al v0.1.0 --uygula   # gercekten yapar
 # 30 soruluk eval
 python -m evals.puanla                    # 0/30  - sabit cevap veren model
 python -m evals.puanla --cevap-anahtari   # 30/30 - dogru cevaplari bilen model
-python -m evals.puanla --model ollama --ollama-model qwen2.5:7b   # gercek model
+python -m evals.puanla --model ollama --ollama-model qwen2.5:7b            # ham model
+python -m evals.puanla --model ollama --ollama-model qwen2.5:7b --hafiza   # sistem
 
 # Testler
 pytest -q
@@ -100,6 +105,10 @@ pytest -q
 
 Konusma gunlugu bir ses kayit cihazidir; bir seyin dogru oldugunu iddia etmez.
 Sistemin bir bilgiyi **ogrenmesi** icin onay kuyrugundan gecmesi gerekir.
+
+Bu kural istisnasizdir: `bilgi/proje_kurallari.json` icindeki projenin KENDI
+kurallari bile `tohumla` komutuyla kuyruga aday olarak konur, onaylanmadan
+hafizaya gecmez. Kural herkese esit uygulanmiyorsa kural degildir.
 
 ## Bilinen sinir
 

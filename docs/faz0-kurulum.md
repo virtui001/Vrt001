@@ -105,7 +105,7 @@ Once her sey yerinde mi, onu dogrula:
 pytest -q
 ```
 
-**Ne gormelisin:** `259 passed`. Bir tanesi bile kirmizi yanarsa bana getir.
+**Ne gormelisin:** `293 passed`. Bir tanesi bile kirmizi yanarsa bana getir.
 
 ---
 
@@ -135,16 +135,64 @@ python cekirdek.py --model ollama --ollama-model qwen2.5:7b
 (orn. "sistem yeni bir bilgi ogrenmek istediginde ne yapar?"). Model bu
 kurallari bilemez, cunku ona soylemedik.
 
-Cozumu var ve zaten elimizde: bu kurallari **onay kuyrugundan gecirip kalici
-hafizaya koyacagiz**, boylece her soruda modele baglam olarak gidecekler.
-Bunu birlikte yapacagiz — ilk puani aldiktan sonra bana getir.
-
-Yani ilk olcum "modelin ham hali", ikinci olcum "sistemin hali" olacak.
-Arasindaki fark, kurdugumuz hafizanin ne ise yaradigini gosterecek.
+**Bu ilk olcum "modelin HAM hali".** Not al, bir kenara yaz.
 
 ---
 
-## 6. Konus
+## 6. Kurallari ogret, sonra tekrar olc
+
+Simdi projenin kendi kurallarini sisteme veriyoruz. Dikkat: kurallar bile
+**onay kuyrugundan geciyor** — projenin kendi kurali bile onaysiz iceri
+giremiyor. Kural herkese esit uygulanmiyorsa kural degildir.
+
+```powershell
+python -m core.approval tohumla
+```
+
+**Ne gormelisin:** 18 kural, numaralanmis halde, ve "Hicbiri HENUZ
+ogrenilmedi" uyarisi. Bu noktada hafiza hala bos:
+
+```powershell
+python -m core.approval hafiza
+```
+
+**Ne gormelisin:** "Hafiza bos."
+
+Simdi listeyi **oku**. Katilmadigin bir madde varsa onu atla ya da reddet.
+Hepsini kabul ediyorsan:
+
+```powershell
+python -m core.approval onayla 1-18
+```
+
+Tek tek de olur (`onayla 3`), secerek de (`onayla 1 4 7`). "onayla hepsi"
+diye bir kisayol **yok** ve olmayacak: neyi onayladigini her zaman numarayla
+soylemen gerekiyor.
+
+Simdi ayni sinavi, bu sefer hafizayla:
+
+```powershell
+python -m evals.puanla --model ollama --ollama-model llama3.1:8b --hafiza
+```
+
+**Bu ikinci olcum "SISTEMIN hali".** Iki puani karsilastir.
+
+| Olcum | Ne soyluyor |
+|---|---|
+| `--hafiza`siz | Modelin kendi basina ne bildigi |
+| `--hafiza`li | Hafiza + geri cagirma boru hattinin ise yarayip yaramadigi |
+
+Ikisi arasindaki fark, kurdugumuz sistemin katkisidir. Ikinci olcum
+belirgin sekilde yuksek cikmali; cikmiyorsa boru hattinda bir sorun var
+ve bunu birlikte bulmamiz gerekir.
+
+**Durustce bir uyari:** ikinci olcum modelin zekasini olcmez, hafizanin
+calisip calismadigini olcer. Modelleri kiyaslarken `hafiza` ve `genel`
+kategorilerine bak — asil ayrisma orada olur.
+
+---
+
+## 7. Konus
 
 ```powershell
 python cekirdek.py --model ollama
@@ -199,7 +247,13 @@ Tahmin yurutmek yerine mesaji okuyacagiz.
 ## Bittiginde
 
 Faz 0'in "bitti tanimi": terminalden yerel modele soru sorulup cevap aliniyor
-ve her sey git'te. 6. adim calistiysa bitmistir.
+ve her sey git'te. **7. adim calistiysa Faz 0 bitmistir.**
 
-Sonrasi: 5. adimdaki iki olcumu alip Faz 1'in eksigini kapatmak — projenin
-kendi kurallarini onay kuyrugundan gecirip kalici hafizaya koymak.
+Bana getirmen gerekenler:
+
+1. 5. adimdaki puanlar (hangi model kac aldi)
+2. 6. adimdaki `--hafiza`li puan
+3. Takildigin yerdeki hata mesajinin tamami (varsa)
+
+Bu uc sey elimde olunca Faz 1'in "bitti tanimi"ni kontrol edip Faz 2'ye
+(duyular) gecebiliriz.

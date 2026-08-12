@@ -20,9 +20,10 @@ UC DOSYA VAR (hepsi ./workspace/ icinde):
 
 TERMINAL KOMUTLARI:
     python -m core.approval listele
-    python -m core.approval onayla 3
+    python -m core.approval onayla 3          (ya da: onayla 1 4 7 / onayla 1-18)
     python -m core.approval reddet 4
     python -m core.approval ekle "Kullanicinin kedisinin adi Pamuk"
+    python -m core.approval tohumla           (proje kurallarini kuyruga koyar)
     python -m core.approval hafiza
 """
 
@@ -34,8 +35,12 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from core.guvenlik import WORKSPACE, guvenli_klasor
+from core.guvenlik import PROJE_KOKU, WORKSPACE, guvenli_klasor
 from core.metin import sadelestir
+
+# Cekirdek'in kendisi hakkinda bilmesi gereken kurallar.
+# 'tohumla' komutu bunlari kuyruga koyar -- hafizaya DEGIL.
+KURALLAR_DOSYASI = PROJE_KOKU / "bilgi" / "proje_kurallari.json"
 
 # Aday durumlari
 BEKLIYOR = "bekliyor"
@@ -266,6 +271,40 @@ class OnayKuyrugu:
         self._gecmise_yaz(REDDEDILDI, aday)
         return aday
 
+    def tohumla(self, dosya: str | Path | None = None) -> list[Aday]:
+        """
+        bilgi/proje_kurallari.json icindeki kurallari KUYRUGA koyar.
+
+        DIKKAT: hafizaya koymaz. Projenin kendi kurallari bile onaysiz iceri
+        giremez -- kural herkese esit uygulanir, yoksa kural degildir.
+
+        Zaten kuyrukta ya da hafizada olanlar tekrar eklenmez, bu yuzden
+        komutu iki kez calistirmak zararsizdir.
+        """
+        dosya = Path(dosya) if dosya else KURALLAR_DOSYASI
+        if not dosya.exists():
+            raise ValueError(f"Kural dosyasi bulunamadi: {dosya}")
+
+        try:
+            veri = json.loads(dosya.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as hata:
+            raise ValueError(f"{dosya} gecerli bir JSON degil: {hata}") from hata
+
+        # Once kuyrukta hali hazirda hangi numaralar var, onu not ediyoruz.
+        # ekle() zaten var olan bir adayi geri donduruyor; onu "yeni eklendi"
+        # diye raporlarsak ikinci calistirmada 18 kural eklenmis gibi gorunur.
+        oncekiler = {a.no for a in self._adaylar()}
+
+        yeniler = []
+        for kural in veri.get("kurallar", []):
+            metin = (kural.get("metin") or "").strip()
+            if not metin:
+                continue
+            aday = self.ekle(metin, kaynak="proje_kurallari")
+            if aday.durum == BEKLIYOR and aday.no not in oncekiler:
+                yeniler.append(aday)
+        return yeniler
+
     def hafiza(self) -> list[dict]:
         """Onaylanmis (kalici) bilgilerin listesi."""
         return self._oku(self.hafiza_dosyasi)
@@ -281,11 +320,19 @@ class OnayKuyrugu:
 YARDIM = """Onay kuyrugu komutlari:
 
   python -m core.approval listele              Bekleyen adaylari gosterir
-  python -m core.approval onayla <no>          Adayi hafizaya alir
-  python -m core.approval reddet <no> [sebep]  Adayi siler
-  python -m core.approval ekle "<metin>"       Yeni aday ekler (test icin)
+  python -m core.approval onayla <no...>       Adaylari hafizaya alir
+  python -m core.approval reddet <no...>       Adaylari siler
+  python -m core.approval ekle "<metin>"       Yeni aday ekler
+  python -m core.approval tohumla              Proje kurallarini kuyruga koyar
   python -m core.approval hafiza               Onaylanmis bilgileri gosterir
-"""
+
+Numara yazarken:
+  onayla 3            tek aday
+  onayla 1 4 7        birden fazla aday
+  onayla 1-12         araliktaki adaylar
+
+"onayla hepsi" diye bir sey YOK ve olmayacak. Neyi onayladigini her zaman
+numarayla soylemen gerekiyor -- listeye bakmadan onaylamak, onay olmaz."""
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -312,16 +359,34 @@ def main(argv: list[str] | None = None) -> int:
             aday = kuyruk.ekle(" ".join(argv[1:]), kaynak="terminal")
             print(f"Kuyruga eklendi (henuz hafizada DEGIL): {aday.satir()}")
 
+        elif komut == "tohumla":
+            yeniler = kuyruk.tohumla()
+            if not yeniler:
+                print("Eklenecek yeni kural yok (hepsi zaten kuyrukta ya da hafizada).")
+            else:
+                print(f"{len(yeniler)} proje kurali onay kuyruguna kondu.")
+                print("Hicbiri HENUZ ogrenilmedi. Once oku, sonra onayla:\n")
+                for a in yeniler:
+                    print(f"  [{a.no:>3}] {a.metin}")
+                ilk, son = yeniler[0].no, yeniler[-1].no
+                print(f"\nHepsini kabul ediyorsan: python -m core.approval onayla {ilk}-{son}")
+
         elif komut == "onayla":
-            no = _numara_oku(argv)
-            kayit = kuyruk.onayla(no)
-            print(f"Onaylandi ve hafizaya alindi: {kayit['metin']}")
+            numaralar = numaralari_oku(argv)
+            for no in numaralar:
+                kayit = kuyruk.onayla(no)
+                print(f"Onaylandi ve hafizaya alindi: [{no}] {kayit['metin'][:70]}")
+            if len(numaralar) > 1:
+                print(f"\nToplam {len(numaralar)} bilgi hafizaya alindi.")
 
         elif komut == "reddet":
-            no = _numara_oku(argv)
+            # Sebep yazilabilsin diye: sadece ilk arguman numara/aralik sayilir,
+            # gerisi sebep metnidir. Toplu red icin 'reddet 1-5' yeterli.
+            numaralar = numaralari_oku(argv[:2])
             sebep = " ".join(argv[2:])
-            aday = kuyruk.reddet(no, sebep)
-            print(f"Reddedildi, hafizaya GIRMEDI: {aday.metin}")
+            for no in numaralar:
+                aday = kuyruk.reddet(no, sebep)
+                print(f"Reddedildi, hafizaya GIRMEDI: [{no}] {aday.metin[:70]}")
 
         elif komut == "hafiza":
             kayitlar = kuyruk.hafiza()
@@ -345,13 +410,40 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _numara_oku(argv: list[str]) -> int:
+def numaralari_oku(argv: list[str]) -> list[int]:
+    """
+    Komut satirindaki numaralari okur. Uc bicim destekleniyor:
+        onayla 3          -> [3]
+        onayla 1 4 7      -> [1, 4, 7]
+        onayla 1-5        -> [1, 2, 3, 4, 5]
+
+    Sonuc kucukten buyuge sirali ve tekrarsizdir.
+    """
     if len(argv) < 2:
         raise ValueError("Numara eksik. Ornek: python -m core.approval onayla 3")
-    try:
-        return int(argv[1])
-    except ValueError:
-        raise ValueError(f"'{argv[1]}' bir numara degil. Ornek: onayla 3") from None
+
+    numaralar: set[int] = set()
+    for parca in argv[1:]:
+        if "-" in parca[1:]:  # "1-5" aralik; bastaki eksiyi (negatif) sayma
+            bas, _, son = parca.partition("-")
+            try:
+                bas_no, son_no = int(bas), int(son)
+            except ValueError:
+                raise ValueError(
+                    f"'{parca}' gecerli bir aralik degil. Ornek: onayla 1-5"
+                ) from None
+            if son_no < bas_no:
+                raise ValueError(f"'{parca}' tersten yazilmis. Ornek: onayla 1-5")
+            numaralar.update(range(bas_no, son_no + 1))
+        else:
+            try:
+                numaralar.add(int(parca))
+            except ValueError:
+                raise ValueError(
+                    f"'{parca}' bir numara degil. Ornek: onayla 3 ya da onayla 1-5"
+                ) from None
+
+    return sorted(numaralar)
 
 
 if __name__ == "__main__":
