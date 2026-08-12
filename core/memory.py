@@ -172,18 +172,14 @@ class OllamaGomucu(Gomucu):
         self.sunucu = sunucu
         self.zaman_asimi_sn = zaman_asimi_sn
         self.boyut = 0  # ilk gom() cagrisinda dolar
+        self._adres = ""  # hangi gomme adresi calisiyor (ilk istekte bulunur)
 
     def gom(self, metin: str) -> list[float]:
-        veri = istek(
-            "/api/embeddings",
-            {"model": self.model, "prompt": metin or ""},
-            self.sunucu,
-            self.zaman_asimi_sn,
-        )
-        vektor = veri.get("embedding")
+        vektor = self._gomme_iste(metin or "")
         if not vektor:
             raise OllamaHatasi(
-                f"Gomme modeli bos cevap dondurdu. Gelen veri: {str(veri)[:200]}"
+                "Gomme modeli bos cevap dondurdu. Model dogru mu? "
+                f"('ollama pull {self.model}' ile indirilmis olmali)"
             )
 
         if self.boyut and len(vektor) != self.boyut:
@@ -199,6 +195,44 @@ class OllamaGomucu(Gomucu):
         if uzunluk == 0:
             return vektor
         return [d / uzunluk for d in vektor]
+
+    def _gomme_iste(self, metin: str) -> list[float]:
+        """
+        Ollama'dan gomme ister.
+
+        NEDEN IKI ADRES DENIYORUZ?
+        Ollama'nin gomme adresi surum icinde degisti:
+            eski: /api/embeddings  {"prompt": ...} -> {"embedding": [...]}
+            yeni: /api/embed       {"input": ...}  -> {"embeddings": [[...]]}
+        Hangi surumun kurulu oldugunu bilmiyoruz ve kullaniciya "once surumunu
+        kontrol et" demek istemiyoruz. Once yeni adresi deniyoruz, o yoksa
+        eskisine dusuyoruz. Bulunani hatirliyoruz ki her seferinde iki istek
+        atmayalim.
+        """
+        if self._adres != "/api/embeddings":
+            try:
+                veri = istek(
+                    "/api/embed",
+                    {"model": self.model, "input": metin},
+                    self.sunucu,
+                    self.zaman_asimi_sn,
+                )
+                kume = veri.get("embeddings") or []
+                if kume:
+                    self._adres = "/api/embed"
+                    return list(kume[0])
+            except OllamaHatasi:
+                # Bu surumde yeni adres yok; eskisini deneyecegiz.
+                pass
+
+        veri = istek(
+            "/api/embeddings",
+            {"model": self.model, "prompt": metin},
+            self.sunucu,
+            self.zaman_asimi_sn,
+        )
+        self._adres = "/api/embeddings"
+        return list(veri.get("embedding") or [])
 
     def hazir_mi(self) -> bool:
         return model_var_mi(self.model, self.sunucu, zaman_asimi_sn=5.0)

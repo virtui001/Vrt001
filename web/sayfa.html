@@ -265,20 +265,59 @@ function balonEkle(sinif, metin) {
   return b;
 }
 
+// Ayni anda tek soru. Ikinci soru sirada beklerken kullanici "cevap
+// vermiyor" saniyor -- onun yerine acikca soyluyoruz.
+let mesgul = false;
+
 async function gonder() {
+  if (mesgul) {
+    alert("Önceki cevap daha gelmedi. Bir saniye…");
+    return;
+  }
   const metin = $("#girdi").value.trim();
   if (!metin) return;
+
+  mesgul = true;
   $("#girdi").value = "";
   $("#gonder").disabled = true;
   balonEkle("sen", metin);
-  const bekle = balonEkle("o", "düşünüyor…");
+  const bekle = balonEkle("o", "düşünüyor… 0 sn");
+
+  // Gecen sureyi saniye saniye gosteriyoruz. "Dondu mu, calisiyor mu"
+  // sorusunun cevabi gorunur olsun diye.
+  const basla = Date.now();
+  const sayac = setInterval(() => {
+    const gecen = Math.round((Date.now() - basla) / 1000);
+    let not = "düşünüyor… " + gecen + " sn";
+    if (gecen === 15) not += "\n(ilk cevap uzun sürer: model ekran kartına yükleniyor)";
+    if (gecen >= 15) not = "düşünüyor… " + gecen + " sn\n(ilk cevap 1-2 dakika sürebilir, model ilk kez yükleniyor)";
+    bekle.textContent = not;
+  }, 1000);
+
+  // Sonsuza kadar beklemek yok. 4 dakikada gelmezse pes edip sebep soyluyoruz.
+  const durdurucu = new AbortController();
+  const zamanAsimi = setTimeout(() => durdurucu.abort(), 240000);
 
   try {
-    const c = await yolla("/api/konus", {metin});
+    const cevap = await fetch("/api/konus", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({metin}),
+      signal: durdurucu.signal
+    });
+    const c = await cevap.json();
+    clearInterval(sayac);
+    clearTimeout(zamanAsimi);
+
+    const gecen = Math.round((Date.now() - basla) / 1000);
     if (c.hata) {
       bekle.textContent = "Hata: " + c.hata;
     } else {
       bekle.textContent = c.cevap;
+      if (gecen > 20) {
+        balonEkle("not", "Bu cevap " + gecen + " saniye sürdü. İlk cevap hep yavaştır; " +
+          "sonrakiler hızlanmalı. Hızlanmıyorsa Teşhis sekmesine bak.");
+      }
       if (c.aday) {
         balonEkle("not",
           "[" + c.aday.no + "] numaralı aday onay kuyruğuna kondu — henüz ÖĞRENMEDİM. " +
@@ -286,8 +325,23 @@ async function gonder() {
       }
     }
   } catch (e) {
-    bekle.textContent = "Sunucuya ulaşılamadı: " + e;
+    clearInterval(sayac);
+    clearTimeout(zamanAsimi);
+    if (e.name === "AbortError") {
+      bekle.textContent =
+        "4 dakika bekledim, cevap gelmedi.\n\n" +
+        "Muhtemel sebep: model ekran kartına sığmıyor ve bilgisayarın belleğinden " +
+        "çalışıyor — bu 10 kat yavaşlatır.\n\n" +
+        "Kontrol için: Windows tuşu → cmd → 'ollama ps' yaz. " +
+        "'100% GPU' yazmıyorsa sebep budur.\n" +
+        "Çözüm: daha küçük bir model (ollama pull qwen2.5:7b).";
+    } else {
+      bekle.textContent = "Sunucuya ulaşılamadı: " + e +
+        "\n(Siyah pencere kapandıysa program durmuş demektir; 2-BASLAT.bat'ı tekrar çalıştır.)";
+    }
   }
+
+  mesgul = false;
   $("#gonder").disabled = false;
   $("#girdi").focus();
   ustBilgi();

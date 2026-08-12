@@ -154,12 +154,19 @@ class OllamaLLM(LLM):
         model: str = "llama3.1:8b",
         sunucu: str = VARSAYILAN_SUNUCU,
         sicaklik: float = 0.7,
-        zaman_asimi_sn: float = 120.0,
+        zaman_asimi_sn: float = 180.0,
+        azami_parca: int = 400,
     ) -> None:
         self.model = model
         self.sunucu = sunucu
         self.sicaklik = sicaklik
+        # Ilk cevap modelin VRAM'e yuklenmesini bekler; bu tek seferlik ve
+        # yavastir. 180 saniye onun icin.
         self.zaman_asimi_sn = zaman_asimi_sn
+        # Cevabin en fazla kac parca (token) olacagi. Sinirsiz birakinca
+        # kucuk modeller bazen sayfalarca yaziyor ve arayuz asili gorunuyor.
+        # 400 parca ~ yarim sayfa; sohbet icin fazlasiyla yeterli.
+        self.azami_parca = azami_parca
 
     def cevapla(self, istem: str, sistem: str | None = None) -> Cevap:
         mesajlar = []
@@ -174,7 +181,10 @@ class OllamaLLM(LLM):
                 "model": self.model,
                 "messages": mesajlar,
                 "stream": False,  # cevabi parca parca degil, tek seferde al
-                "options": {"temperature": self.sicaklik},
+                "options": {
+                    "temperature": self.sicaklik,
+                    "num_predict": self.azami_parca,
+                },
             },
             self.sunucu,
             self.zaman_asimi_sn,

@@ -37,6 +37,8 @@ class SahteOllama(BaseHTTPRequestHandler):
     gomme = [3.0, 4.0]  # uzunlugu 5; normalize edilince [0.6, 0.8] olmali
     hata_kodu = None  # sayi verilirse o HTTP hatasini doner
     bozuk_cevap = False
+    # Bu Ollama hangi gomme adreslerini tanisin? Surume gore degisiyor.
+    destekli_gomme = ("embed", "embeddings")
     gelen_istekler: list = []
 
     def log_message(self, *_):
@@ -80,8 +82,19 @@ class SahteOllama(BaseHTTPRequestHandler):
                     "eval_count": 42,
                 }
             )
+        elif self.path == "/api/embed":
+            # Yeni Ollama surumu. 'destekli_gomme' ile kapatilabiliyor ki
+            # eski surumu de taklit edebilelim.
+            if "embed" in type(self).destekli_gomme:
+                self._yaz({"embeddings": [list(type(self).gomme)]})
+            else:
+                self._yaz({"error": "yok"}, 404)
         elif self.path == "/api/embeddings":
-            self._yaz({"embedding": list(type(self).gomme)})
+            # Eski Ollama surumu.
+            if "embeddings" in type(self).destekli_gomme:
+                self._yaz({"embedding": list(type(self).gomme)})
+            else:
+                self._yaz({"error": "yok"}, 404)
         else:
             self._yaz({"error": "bilinmeyen yol"}, 404)
 
@@ -97,6 +110,7 @@ def sunucu():
     SahteOllama.gomme = [3.0, 4.0]
     SahteOllama.hata_kodu = None
     SahteOllama.bozuk_cevap = False
+    SahteOllama.destekli_gomme = ("embed", "embeddings")
     SahteOllama.gelen_istekler = []
 
     servis = HTTPServer(("127.0.0.1", 0), SahteOllama)
@@ -169,6 +183,16 @@ def test_sicaklik_iletilir(sunucu):
     assert secenekler["temperature"] == 0.2
 
 
+def test_cevap_uzunlugu_sinirli(sunucu):
+    """
+    Sinirsiz birakinca kucuk modeller sayfalarca yazip arayuzu asili
+    gosterebiliyor. Ust sinir konuldu.
+    """
+    OllamaLLM(sunucu=sunucu).cevapla("soru")
+    secenekler = SahteOllama.gelen_istekler[-1]["govde"]["options"]
+    assert secenekler["num_predict"] == 400
+
+
 def test_olcum_bilgisi_dolar(sunucu):
     """Hiz olcumu bugunden aliskanlik: 'olcmeden ust kademeye cikilmaz'."""
     cevap = OllamaLLM(sunucu=sunucu).cevapla("soru")
@@ -228,9 +252,44 @@ def test_gomme_boyu_degisirse_hata(sunucu):
 def test_gomme_modeli_dogru_adrese_gider(sunucu):
     OllamaGomucu(model="nomic-embed-text", sunucu=sunucu).gom("merhaba")
     son = SahteOllama.gelen_istekler[-1]
-    assert son["yol"] == "/api/embeddings"
+    assert son["yol"] == "/api/embed"
     assert son["govde"]["model"] == "nomic-embed-text"
-    assert son["govde"]["prompt"] == "merhaba"
+    assert son["govde"]["input"] == "merhaba"
+
+
+def test_YENI_ollama_surumu_calisir(sunucu):
+    """Sadece /api/embed tanıyan surum (yeni)."""
+    SahteOllama.destekli_gomme = ("embed",)
+    SahteOllama.gomme = [3.0, 4.0]
+    assert OllamaGomucu(sunucu=sunucu).gom("merhaba") == pytest.approx([0.6, 0.8])
+
+
+def test_ESKI_ollama_surumu_calisir(sunucu):
+    """
+    Sadece /api/embeddings tanıyan surum (eski). Kod once yeni adresi dener,
+    404 alinca eskisine duser -- kullaniciya "once surumunu kontrol et"
+    dedirtmeden.
+    """
+    SahteOllama.destekli_gomme = ("embeddings",)
+    SahteOllama.gomme = [3.0, 4.0]
+    assert OllamaGomucu(sunucu=sunucu).gom("merhaba") == pytest.approx([0.6, 0.8])
+
+
+def test_calisan_adres_hatirlanir(sunucu):
+    """Her seferinde iki istek atmayalim: bulunan adres akilda kalmali."""
+    SahteOllama.destekli_gomme = ("embeddings",)
+    g = OllamaGomucu(sunucu=sunucu)
+    g.gom("birinci")
+    sayi_once = len(SahteOllama.gelen_istekler)
+    g.gom("ikinci")
+    # Ikinci cagride sadece 1 istek atilmali (yeni adres tekrar denenmemeli)
+    assert len(SahteOllama.gelen_istekler) - sayi_once == 1
+
+
+def test_hicbir_gomme_adresi_yoksa_acik_hata(sunucu):
+    SahteOllama.destekli_gomme = ()
+    with pytest.raises(OllamaHatasi):
+        OllamaGomucu(sunucu=sunucu).gom("merhaba")
 
 
 def test_gomucu_hazir_mi(sunucu):

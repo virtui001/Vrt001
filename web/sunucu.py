@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -58,7 +59,19 @@ class Islemci(BaseHTTPRequestHandler):
     """Tarayicidan gelen istekleri karsilar."""
 
     def log_message(self, *_):
-        pass  # terminali istek kayitlariyla doldurmasin
+        # Python'un kendi istek kaydini kapatiyoruz; onun yerine asagida
+        # kendi kisa kaydimizi basiyoruz (bkz. _kayit).
+        pass
+
+    def _kayit(self, metin: str) -> None:
+        """
+        Siyah pencereye tek satirlik bilgi basar.
+
+        NEDEN? Arayuz "dusunuyor..." derken arkada ne oldugunu gorebilmek
+        icin. Ilk surumde butun kayitlari kapatmistim ve bir sey takildiginda
+        hicbir ipucu kalmiyordu -- bu bir hataydi.
+        """
+        print(metin, flush=True)
 
     # -- Yardimcilar ---------------------------------------------------------
 
@@ -162,6 +175,7 @@ class Islemci(BaseHTTPRequestHandler):
                 else:
                     self._json_yaz({"hata": "Bilinmeyen adres"}, 404)
         except Exception as hata:
+            self._kayit(f"!! HATA: {hata}")
             self._json_yaz({"hata": str(hata)}, 500)
 
     # -- Islemler ------------------------------------------------------------
@@ -189,8 +203,22 @@ class Islemci(BaseHTTPRequestHandler):
             return {"hata": "Bos mesaj"}
 
         c = cekirdek_al()
+        basla = time.perf_counter()
+
+        # Her adimi ayri ayri yaziyoruz: takilirsa hangi adimda takildigi
+        # siyah pencerede gorunsun.
+        self._kayit(f"> soru alindi: {metin[:60]}")
+
         c.hafiza.ekle(KULLANICI, metin)
-        cevap = c.llm.cevapla(metin, sistem=c.baglam(metin))
+        baglam = c.baglam(metin)
+        self._kayit(f"  hatirlama tamam ({time.perf_counter() - basla:.1f} sn), modele soruluyor...")
+
+        cevap = c.llm.cevapla(metin, sistem=baglam)
+        self._kayit(
+            f"< cevap geldi ({cevap.sure_sn} sn, "
+            f"{cevap.ek_bilgi.get('uretilen_parca', '?')} parca)"
+        )
+
         c.hafiza.ekle(CEKIRDEK, cevap.metin)
 
         sonuc = {
