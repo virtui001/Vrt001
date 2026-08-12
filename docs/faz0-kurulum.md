@@ -87,6 +87,22 @@ Bu komut terminali mesgul eder — **kapatma**, yeni bir terminal ac.
 
 ## 4. Projeyi indir ve kur
 
+Once Python var mi:
+
+```powershell
+python --version
+```
+
+**Ne gormelisin:** `Python 3.11.x` ya da daha yenisi.
+
+**Microsoft Store aciliyorsa:** Windows'un sahte `python` kisayolu devrede.
+<https://www.python.org/downloads/> adresinden indir ve kurulum ekranindaki
+**"Add python.exe to PATH"** kutusunu isaretle. Sonra terminali kapatip yeniden ac.
+
+**3.11'den eskiyse:** proje calismayabilir, yeni surumu kur.
+
+Simdi projeyi al:
+
 ```powershell
 git clone https://github.com/virtui001/Vrt001.git
 cd Vrt001
@@ -99,13 +115,24 @@ pip install -r requirements.txt
 
 **Ne gormelisin:** satir basinda `(.venv)` yazisi ve `pytest` kurulumu.
 
+**"betik calistirma devre disi" (running scripts is disabled) hatasi alirsan:**
+PowerShell guvenlik icin betikleri engelliyor. Su komutla kendi kullanicin
+icin izin ver, sonra tekrar dene:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+Bu sadece senin kullanicini etkiler, sistemi genel olarak acmaz.
+Alternatif: PowerShell yerine `cmd` kullan, orada bu kisitlama yoktur.
+
 Once her sey yerinde mi, onu dogrula:
 
 ```powershell
 pytest -q
 ```
 
-**Ne gormelisin:** `293 passed`. Bir tanesi bile kirmizi yanarsa bana getir.
+**Ne gormelisin:** `300 passed`. Bir tanesi bile kirmizi yanarsa bana getir.
 
 ---
 
@@ -234,6 +261,10 @@ Program artik anlasilir hata mesajlari veriyor. En sik gorulecekler:
 **"Ollama 120 saniyede cevap vermedi"**
 → Model ilk yuklemede yavas olabilir, tekrar dene. Surekli oluyorsa model
 ekran kartina sigmiyordur — daha kucuk bir model dene.
+
+**Turkce harfler bozuk gorunuyor (Ali yerine Ali? gibi)**
+→ Terminalin kod sayfasi eski. Program cokmez ama gorunum bozulur.
+Duzeltmek icin: `chcp 65001` yaz (UTF-8'e gecer), sonra komutu tekrarla.
 
 **Cevaplar cok yavas geliyor (saniyede birkac kelime)**
 → Model VRAM'e sigmamis, RAM'den calisiyor. `ollama ps` yaz; `100% GPU`

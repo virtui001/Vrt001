@@ -46,6 +46,7 @@ from core.llm import LLM, llm_olustur
 from core.memory import CEKIRDEK, KULLANICI, Hafiza, OllamaGomucu
 from core.metin import turkcesiz
 from core.ollama_baglanti import VARSAYILAN_SUNUCU
+from core.terminal import utf8_cikti
 from models.state import Durum, kaydet as durum_kaydet, yukle_veya_varsayilan
 
 SISTEM_METNI = (
@@ -273,6 +274,7 @@ def main(argv: list[str] | None = None, girdi=input, yazdir=print) -> int:
     girdi/yazdir disaridan verilebiliyor; testler boylece klavye olmadan
     konusabiliyor. Normal kullanimda Python'un kendi input/print'i kullanilir.
     """
+    utf8_cikti()
     argv = list(sys.argv[1:] if argv is None else argv)
 
     def _secenek(ad: str, varsayilan: str) -> str:

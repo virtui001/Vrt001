@@ -37,6 +37,7 @@ from pathlib import Path
 
 from core.guvenlik import PROJE_KOKU, WORKSPACE, guvenli_klasor
 from core.metin import sadelestir
+from core.terminal import utf8_cikti
 
 # Cekirdek'in kendisi hakkinda bilmesi gereken kurallar.
 # 'tohumla' komutu bunlari kuyruga koyar -- hafizaya DEGIL.
@@ -340,6 +341,7 @@ def main(argv: list[str] | None = None) -> int:
     Terminal girisi. Basarili ise 0, hatali ise 1 dondurur.
     (0 = her sey yolunda, bu Unix geleneğidir; testler de bunu kontrol eder.)
     """
+    utf8_cikti()  # Windows'ta Turkce harfler ciktiyi cokturmesin
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
         print(YARDIM)

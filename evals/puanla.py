@@ -47,6 +47,7 @@ from core.llm import LLM, llm_olustur  # noqa: E402
 # Puanlamada Turkce harflere duyarsiz karsilastirma yapiyoruz:
 # "açlık" yazan da "aclik" yazan da ayni puani almali.
 from core.metin import turkcesiz as sadelestir  # noqa: E402
+from core.terminal import utf8_cikti  # noqa: E402
 
 EVAL_DOSYASI = Path(__file__).resolve().parent / "eval_seti.json"
 WORKSPACE = PROJE_KOKU / "workspace"
@@ -58,6 +59,7 @@ SISTEM_METNI = (
     "Sen Cekirdek adli bir asistansin. Kisa, net ve Turkce cevap ver. "
     "Bilmiyorsan bilmiyorum de, uydurma."
 )
+
 
 def eval_setini_yukle(yol: str | Path = EVAL_DOSYASI) -> list[dict]:
     """eval_seti.json dosyasini okur ve soru listesini dondurur."""
@@ -207,6 +209,7 @@ def son_puani_yaz(rapor: dict, yol: Path = SON_PUAN_DOSYASI) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    utf8_cikti()
     p = argparse.ArgumentParser(description="Cekirdek eval puanlama betigi")
     p.add_argument("--model", default="mock", help="mock (varsayilan) veya ollama")
     p.add_argument(

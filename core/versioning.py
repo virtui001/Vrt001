@@ -28,6 +28,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from core.terminal import utf8_cikti
+
 PROJE_KOKU = Path(__file__).resolve().parent.parent
 
 # Commit atarken kullanilacak kimlik. Bilgisayarinda git ayarli degilse bile
@@ -238,6 +240,7 @@ def _eval_gecti_mi(esik: int) -> bool:
 
 
 def main(argv: list[str] | None = None) -> int:
+    utf8_cikti()
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
         print(YARDIM)
